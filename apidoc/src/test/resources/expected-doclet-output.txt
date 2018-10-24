@@ -1,0 +1,60 @@
+package org.mozilla.test {
+
+  public class TestClass {
+    ctor public TestClass();
+    ctor public TestClass(java.lang.String);
+    ctor public TestClass(java.lang.String, int);
+    ctor protected TestClass(boolean);
+    method public void testVoidMethod();
+    method public java.lang.String testStringMethod();
+    method public void testVoidMethodWithArg(java.lang.String);
+    method public java.lang.String testStringMethodWithArg(java.lang.String);
+    method public synchronized void testSynchronized();
+    method public static void testStatic();
+    method public final void testFinal();
+    method public void testVarArgsOneArg(int...);
+    method public void testVarArgsTwoArgs(int, int...);
+    method public void testFinalArg(int);
+    method protected void testProtectedMethod();
+    field public java.lang.String testFieldWithoutValue;
+    field public java.lang.String testFieldWithValue;
+    field public final java.lang.String testFinalField = "finalValue";
+    field public static final java.lang.String testFinalStaticField = "finalStaticValue";
+    field protected int testProtectedField;
+  }
+
+  public abstract class TestClass.TestAbstractClass {
+    ctor public TestAbstractClass();
+  }
+
+  public static class TestClass.TestExtends extends org.mozilla.test.TestClass.TestInterfaceImpl {
+    ctor public TestExtends();
+  }
+
+  public static interface TestClass.TestInterface {
+    method public void testInterfaceMethod();
+  }
+
+  public static class TestClass.TestInterfaceImpl implements org.mozilla.test.TestClass.TestInterface {
+    ctor public TestInterfaceImpl();
+    method public void testInterfaceMethod();
+  }
+
+  public static interface TestClass.TestInterfaceTwo {
+  }
+
+  public static class TestClass.TestMultipleInterfaceImpl implements org.mozilla.test.TestClass.TestInterface org.mozilla.test.TestClass.TestInterfaceTwo {
+    ctor public TestMultipleInterfaceImpl();
+    method public void testInterfaceMethod();
+  }
+
+  public static class TestClass.TestStaticSubclass {
+    ctor public TestStaticSubclass();
+  }
+
+  public class TestClass.TestSubclass {
+    ctor public TestSubclass();
+  }
+
+}
+

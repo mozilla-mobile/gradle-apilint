@@ -1,0 +1,58 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+import org.mozilla.apilint.Config
+
+buildDir "${topobjdir}/apidoc"
+
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+
+dependencies {
+    implementation files("${System.properties['java.home']}/../lib/tools.jar")
+}
+
+def javadoc
+switch (JavaVersion.current()) {
+    case JavaVersion.VERSION_1_7:
+    case JavaVersion.VERSION_1_8:
+       javadoc = "${System.properties['java.home']}/../bin/javadoc"
+       break
+
+    case JavaVersion.VERSION_1_9:
+    case JavaVersion.VERSION_1_10:
+    case JavaVersion.VERSION_11:
+    case JavaVersion.VERSION_HIGHER:
+        javadoc = "${System.properties['java.home']}/bin/javadoc"
+        break
+
+    default:
+        throw new GradleException("Java version '" + JavaVersion.current() + "' not supported")
+}
+
+task testApiDoclet(type: Exec) {
+    workingDir '.'
+    commandLine 'python', file('src/test/resources/apidoc_test.py'),
+        '--javadoc', javadoc,
+        '--doclet-jar', "${buildDir}/libs/apidoc.jar",
+        '--java-root', file('src/test/fake_root'),
+        '--out-dir', "${buildDir}/tmp",
+        '--expected', file('src/test/resources/expected-doclet-output.txt')
+}
+
+testApiDoclet.dependsOn jar
+
+test.dependsOn testApiDoclet
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'org.mozilla.android'
+            artifactId = 'apidoc-plugin'
+            version = Config.API_DOC_VERSION
+
+            from components.java
+        }
+    }
+}
