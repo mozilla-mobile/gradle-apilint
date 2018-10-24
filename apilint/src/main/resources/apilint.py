@@ -105,7 +105,7 @@ class Method():
             while r in raw: raw.remove(r)
         self.split = list(raw)
 
-        for r in ["method", "public", "protected", "static", "final", "deprecated", "abstract", "default"]:
+        for r in ["method", "public", "protected", "static", "final", "synchronized", "deprecated", "abstract", "default"]:
             while r in raw: raw.remove(r)
 
         self.typ = raw[0]
@@ -203,8 +203,7 @@ def _parse_stream(f, clazz_cb=None):
             if clazz and clazz_cb:
                 clazz_cb(clazz)
             clazz = Class(pkg, line, raw, blame)
-            if not clazz_cb:
-                api[clazz.fullname] = clazz
+            api[clazz.fullname] = clazz
         elif raw.startswith("    ctor"):
             clazz.ctors.append(Method(clazz, line, raw, blame))
         elif raw.startswith("    method"):
@@ -1126,7 +1125,7 @@ def verify_units(clazz):
 
     for m in clazz.methods:
         if m.typ not in ["short","int","long"]: continue
-        for k, v in bad.iteritems():
+        for k, v in bad.items():
             if m.name.endswith(k):
                 error(clazz, m, None, "Expected method name units to be " + v)
         if m.name.endswith("Nanos") or m.name.endswith("Micros"):
@@ -1404,8 +1403,8 @@ def examine_stream(stream):
     global failures, noticed
     failures = {}
     noticed = {}
-    _parse_stream(stream, examine_clazz)
-    return (failures, noticed)
+    api = _parse_stream(stream, examine_clazz)
+    return (failures, noticed, api)
 
 
 def examine_api(api):
@@ -1431,7 +1430,7 @@ def verify_compat(cur, prev):
 
     def all_methods(api, clazz):
         methods = list(clazz.methods)
-        if clazz.extends is not None:
+        if clazz.extends is not None and clazz.extends in api:
             methods.extend(all_methods(api, api[clazz.extends]))
         return methods
 
@@ -1458,7 +1457,7 @@ def verify_compat(cur, prev):
 
         for test in prev_clazz.ctors:
             if not ctor_exists(cur, cur_clazz, test):
-                error(prev_clazz, prev_ctor, None, "Constructor removed or incompatible change")
+                error(prev_clazz, test, None, "Constructor removed or incompatible change")
 
         methods = all_methods(prev, prev_clazz)
         for test in methods:
@@ -1499,11 +1498,11 @@ def show_deprecations_at_birth(cur, prev):
             if " deprecated " in i.raw:
                 error(clazz, i, None, "Found API deprecation at birth")
 
-    print "%s Deprecated at birth %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True),
-                                            format(reset=True)))
+    print("%s Deprecated at birth %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True),
+                                            format(reset=True))))
     for f in sorted(failures):
-        print failures[f]
-        print
+        print(failures[f])
+        print("")
 
 
 if __name__ == "__main__":
@@ -1540,10 +1539,10 @@ if __name__ == "__main__":
         sys.exit()
 
     with current_file as f:
-        cur_fail, cur_noticed = examine_stream(f)
+        cur_fail, cur_noticed, cur = examine_stream(f)
     if not previous_file is None:
         with previous_file as f:
-            prev_fail, prev_noticed = examine_stream(f)
+            prev_fail, prev_noticed, prev = examine_stream(f)
 
         # ignore errors from previous API level
         for p in prev_fail:
@@ -1551,30 +1550,30 @@ if __name__ == "__main__":
                 del cur_fail[p]
 
         # ignore classes unchanged from previous API level
-        for k, v in prev_noticed.iteritems():
+        for k, v in prev_noticed.items():
             if k in cur_noticed and v == cur_noticed[k]:
                 del cur_noticed[k]
 
-        """
-        # NOTE: disabled because of memory pressure
         # look for compatibility issues
         compat_fail = verify_compat(cur, prev)
 
-        print "%s API compatibility issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True)))
-        for f in sorted(compat_fail):
-            print compat_fail[f]
-            print
-        """
+        if len(compat_fail):
+            print("%s API compatibility issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
+            for f in sorted(compat_fail):
+                print(compat_fail[f])
+                print("")
+            sys.exit(131)
 
     if args['show_noticed'] and len(cur_noticed) != 0:
-        print "%s API changes noticed %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True)))
+        print("%s API changes noticed %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
         for f in sorted(cur_noticed.keys()):
-            print f
-        print
+            print(f)
+        print("")
+        sys.exit(10)
 
     if len(cur_fail) != 0:
-        print "%s API style issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True)))
+        print("%s API style issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
         for f in sorted(cur_fail):
-            print cur_fail[f]
-            print
+            print(cur_fail[f])
+            print("")
         sys.exit(77)
