@@ -36,6 +36,18 @@
     "test": "test-method-renamed",
     "expected": "INCOMPATIBLE"
   },{
+    "test": "test-annotation-add",
+    "expected": "INCOMPATIBLE"
+  },{
+    "test": "test-annotation-remove",
+    "expected": "INCOMPATIBLE"
+  },{
+    "test": "test-annotation-remove-ctor",
+    "expected": "INCOMPATIBLE"
+  },{
+    "test": "test-annotation-remove-class",
+    "expected": "INCOMPATIBLE"
+  },{
     "test": "test-removed-final-modifier-class",
     "expected": "API_CHANGE"
   },{
@@ -46,6 +58,9 @@
     "expected": "API_CHANGE"
   },{
     "test": "test-method-moved-to-parent-class",
+    "expected": "API_CHANGE"
+  },{
+    "test": "test-annotation-add-class",
     "expected": "API_CHANGE"
   },{
     "test": "test-whitespace-change",
