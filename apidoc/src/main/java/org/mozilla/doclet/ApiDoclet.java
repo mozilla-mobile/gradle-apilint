@@ -8,10 +8,14 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.sun.javadoc.AnnotationDesc;
+import com.sun.javadoc.AnnotationTypeDoc;
 import com.sun.javadoc.ClassDoc;
 import com.sun.javadoc.ConstructorDoc;
 import com.sun.javadoc.Doc;
@@ -32,6 +36,17 @@ public class ApiDoclet {
     private static final String OPTION_DOCTITLE = "-doctitle";
     private static final String OPTION_WINDOWTITLE = "-windowtitle";
     private static final String OPTION_DIRECTORY = "-d";
+
+    private static final Set<String> ANNOTATIONS = new HashSet<>();
+    static {
+        ANNOTATIONS.add("java.lang.Deprecated");
+
+        ANNOTATIONS.add("android.support.annotation.AnyThread");
+        ANNOTATIONS.add("android.support.annotation.BinderThread");
+        ANNOTATIONS.add("android.support.annotation.MainThread");
+        ANNOTATIONS.add("android.support.annotation.UiThread");
+        ANNOTATIONS.add("android.support.annotation.WorkerThread");
+    }
 
     /** Doclet API: check that the options provided are valid */
     public static boolean validOptions(String options[][],
@@ -125,7 +140,9 @@ public class ApiDoclet {
     };
 
     private String toLine(ClassDoc classDoc) {
-        String classLine = classDoc.modifiers() + " ";
+        String classLine = annotationFragment(classDoc);
+        classLine += classDoc.modifiers() + " ";
+
         if (!classDoc.isInterface()) {
             classLine += "class ";
         }
@@ -158,6 +175,23 @@ public class ApiDoclet {
 
         writer.line("}");
         writer.newLine();
+    }
+
+    private Stream<String> from(AnnotationDesc[] annotation) {
+        return Stream.of(annotation)
+                    .map(AnnotationDesc::annotationType)
+                    .map(AnnotationTypeDoc::toString)
+                    .filter(ANNOTATIONS::contains)
+                    .map(s -> "@" + s);
+    }
+
+    private String annotationFragment(ProgramElementDoc member) {
+        String fragment = from(member.annotations())
+               .collect(Collectors.joining(" "));
+        if (fragment.equals("")) {
+            return "";
+        }
+        return fragment + " ";
     }
 
     private String tag(ProgramElementDoc member) {
@@ -199,6 +233,8 @@ public class ApiDoclet {
 
     private String toLine(ProgramElementDoc member) {
         String line = tag(member) + " ";
+
+        line += annotationFragment(member);
 
         if (!member.modifiers().equals("")) {
             line += member.modifiers() + " ";

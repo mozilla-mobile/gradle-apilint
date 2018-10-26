@@ -5,6 +5,8 @@ package org.mozilla.test {
     ctor public TestClass(java.lang.String);
     ctor public TestClass(java.lang.String, int);
     ctor protected TestClass(boolean);
+    ctor @java.lang.Deprecated public TestClass(float);
+    ctor public TestClass(int, float);
     method public void testVoidMethod();
     method public java.lang.String testStringMethod();
     method public void testVoidMethodWithArg(java.lang.String);
@@ -16,11 +18,23 @@ package org.mozilla.test {
     method public void testVarArgsTwoArgs(int, int...);
     method public void testFinalArg(int);
     method protected void testProtectedMethod();
+    method @java.lang.Deprecated public void testAnnotation();
+    method public void testHiddenAnnotation();
     field public java.lang.String testFieldWithoutValue;
     field public java.lang.String testFieldWithValue;
     field public final java.lang.String testFinalField = "finalValue";
     field public static final java.lang.String testFinalStaticField = "finalStaticValue";
     field protected int testProtectedField;
+    field @java.lang.Deprecated public static final int TEST_DEPRECATED_CONST = 1;
+    field public static final int TEST_HIDDEN_ANNOTATION = 2;
+  }
+
+  @java.lang.Deprecated public class TestClass.DeprecatedClass {
+    ctor public DeprecatedClass();
+  }
+
+  public class TestClass.HiddenAnnotationClass {
+    ctor public HiddenAnnotationClass();
   }
 
   public abstract class TestClass.TestAbstractClass {
