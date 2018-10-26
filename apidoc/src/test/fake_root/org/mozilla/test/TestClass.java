@@ -37,6 +37,11 @@ public class TestClass {
     protected TestClass (boolean arg) {}
     TestClass(int arg) {}
 
+    @Deprecated
+    public class DeprecatedClass {}
+    @SuppressWarnings("")
+    public class HiddenAnnotationClass {}
+
     public void testVoidMethod() {}
     public String testStringMethod() { return null; }
 
@@ -54,4 +59,18 @@ public class TestClass {
 
     protected void testProtectedMethod() {}
     void testPackageProtectedMethod() {}
+
+    @Deprecated
+    public void testAnnotation() {}
+    @Deprecated
+    public TestClass(float arg) {}
+    @Deprecated
+    public final static int TEST_DEPRECATED_CONST = 1;
+
+    @SuppressWarnings("")
+    public void testHiddenAnnotation() {}
+    @SuppressWarnings("")
+    public TestClass(int arg0, float arg1) {}
+    @SuppressWarnings("")
+    public final static int TEST_HIDDEN_ANNOTATION = 2;
 }

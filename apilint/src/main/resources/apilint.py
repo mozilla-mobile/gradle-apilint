@@ -62,6 +62,20 @@ def ident(raw):
     return raw
 
 
+class Annotation():
+    def __init__(self, clazz, line, raw, blame):
+        self.clazz = clazz
+        self.line = line
+        self.raw = raw[1:]
+        self.blame = blame
+        self.ident = self.raw
+
+    def __hash__(self):
+        return hash(self.raw)
+
+    def __repr__(self):
+        return self.raw
+
 class Field():
     def __init__(self, clazz, line, raw, blame):
         self.clazz = clazz
@@ -108,6 +122,12 @@ class Method():
         for r in ["method", "public", "protected", "static", "final", "synchronized", "deprecated", "abstract", "default"]:
             while r in raw: raw.remove(r)
 
+        self.annotations = [
+            Annotation(self, line, a, blame) for a in raw if a.startswith("@")]
+
+        for a in self.annotations:
+            while a in raw: raw.remove("@" + a.ident)
+
         self.typ = raw[0]
         self.name = raw[1]
         self.args = []
@@ -150,6 +170,9 @@ class Class():
         else:
             self.extends = None
             self.extends_path = []
+
+        self.annotations = [
+            Annotation(self, line, a, blame) for a in raw if a.startswith("@")]
 
         self.fullname = self.pkg.name + "." + self.fullname
         self.fullname_path = self.fullname.split(".")
@@ -1445,6 +1468,11 @@ def verify_compat(cur, prev):
             if f.ident == test.ident: return True
         return False
 
+    def annotation_exists(api, clazz, test):
+        for a in clazz.annotations:
+            if a.ident == test.ident: return True
+        return False
+
     failures = {}
     for key in sorted(prev.keys()):
         prev_clazz = prev[key]
@@ -1454,6 +1482,10 @@ def verify_compat(cur, prev):
             continue
 
         cur_clazz = cur[key]
+
+        for test in prev_clazz.annotations:
+            if not annotation_exists(cur, cur_clazz, test):
+                error(prev_clazz, test, None, "Annotation removed or incompatible change")
 
         for test in prev_clazz.ctors:
             if not ctor_exists(cur, cur_clazz, test):
