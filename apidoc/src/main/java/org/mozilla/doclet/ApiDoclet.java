@@ -16,11 +16,13 @@ import com.sun.javadoc.ClassDoc;
 import com.sun.javadoc.ConstructorDoc;
 import com.sun.javadoc.Doc;
 import com.sun.javadoc.DocErrorReporter;
+import com.sun.javadoc.ExecutableMemberDoc;
 import com.sun.javadoc.FieldDoc;
 import com.sun.javadoc.LanguageVersion;
 import com.sun.javadoc.MethodDoc;
 import com.sun.javadoc.PackageDoc;
 import com.sun.javadoc.Parameter;
+import com.sun.javadoc.ProgramElementDoc;
 import com.sun.javadoc.RootDoc;
 import com.sun.javadoc.Type;
 
@@ -146,82 +148,79 @@ public class ApiDoclet {
     private void writeClass(ClassDoc classDoc, Writer writer) {
         writer.line(toLine(classDoc));
 
-        Stream.of(
-                Stream.of(classDoc.constructors()).map(this::toLine),
-                Stream.of(classDoc.methods()).map(this::toLine),
-                Stream.of(classDoc.enumConstants()).map(this::toLineEnum),
-                Stream.of(classDoc.fields()).map(this::toLine))
-            .flatMap(s -> s)
+        Stream.<Stream<ProgramElementDoc>> of(
+                Stream.of(classDoc.constructors()),
+                Stream.of(classDoc.methods()),
+                Stream.of(classDoc.enumConstants()),
+                Stream.of(classDoc.fields()))
+            .flatMap(s -> s.map(this::toLine))
             .forEach(writer.indent()::line);
 
         writer.line("}");
         writer.newLine();
     }
 
-    private String toLineEnum(FieldDoc enumConstant) {
-        return toLineBase("enum_constant", enumConstant);
+    private String tag(ProgramElementDoc member) {
+        if (member.isConstructor()) {
+            return "ctor";
+        } else if (member.isMethod()) {
+            return "method";
+        } else if (member.isField()) {
+            return "field";
+        } else if (member.isEnumConstant()) {
+            return "enum_constant";
+        } else {
+            throw new IllegalArgumentException("Unexpected member.");
+        }
     }
 
-    private String toLine(ConstructorDoc constructor) {
-        String constructorLine = "ctor ";
-        if (!constructor.modifiers().equals("")) {
-            constructorLine += constructor.modifiers() + " ";
-        }
-        constructorLine += constructor.name() + "(";
+    private String paramsFragment(ExecutableMemberDoc executable) {
+        String fragment = "(";
 
-        constructorLine += from(constructor.parameters())
-            .collect(Collectors.joining(", "));
-
-        constructorLine += ");";
-
-        return constructorLine;
-    }
-
-    private String toLine(MethodDoc method) {
-        String methodLine = "method ";
-        if (!method.modifiers().equals("")) {
-            methodLine += method.modifiers() + " ";
-        }
-        methodLine += method.returnType() + " ";
-        methodLine += method.name() + "(";
-
-        Stream<String> parameters = from(method.parameters());
-
-        methodLine += parameters
+        fragment += Stream.of(executable.parameters())
+                .map(Parameter::type)
+                .map(Type::toString)
                 .collect(Collectors.joining(", "));
 
-        if (method.isVarArgs()) {
-            methodLine = methodLine.replaceAll("\\[\\]$", "...");
+        if (executable.isVarArgs()) {
+            fragment = fragment.replaceAll("\\[\\]$", "...");
         }
 
-        methodLine += ");";
-        return methodLine;
+        return fragment + ")";
     }
 
-    private String toLineBase(String tag, FieldDoc field) {
-        String fieldLine = tag + " ";
-        if (!field.modifiers().equals("")) {
-            fieldLine += field.modifiers() + " ";
-        }
-        fieldLine += field.type() + " ";
-        fieldLine += field.name();
-        if (field.constantValueExpression() != null) {
-            fieldLine += " = " + field.constantValueExpression();
+    private String valueFragment(FieldDoc field) {
+        if (field.constantValueExpression() == null) {
+            return "";
         }
 
-        fieldLine += ";";
-
-        return fieldLine;
+        return " = " + field.constantValueExpression();
     }
 
-    private String toLine(FieldDoc field) {
-        return toLineBase("field", field);
-    }
+    private String toLine(ProgramElementDoc member) {
+        String line = tag(member) + " ";
 
-    private Stream<String> from(Parameter[] parameters) {
-        return Stream.of(parameters)
-            .map(Parameter::type)
-            .map(Type::toString);
+        if (!member.modifiers().equals("")) {
+            line += member.modifiers() + " ";
+        }
+
+        if (member instanceof MethodDoc) {
+            line += ((MethodDoc) member).returnType() + " ";
+        } else if (member instanceof FieldDoc){
+            line += ((FieldDoc) member).type() + " ";
+        }
+
+        line += member.name();
+
+        if (member instanceof ExecutableMemberDoc) {
+            line += paramsFragment((ExecutableMemberDoc) member);
+        }
+
+        if (member instanceof FieldDoc) {
+            line += valueFragment((FieldDoc) member);
+        }
+
+        return line + ";";
     }
 
     public interface Writer {
