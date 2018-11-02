@@ -26,9 +26,11 @@ import com.sun.javadoc.LanguageVersion;
 import com.sun.javadoc.MethodDoc;
 import com.sun.javadoc.PackageDoc;
 import com.sun.javadoc.Parameter;
+import com.sun.javadoc.ParameterizedType;
 import com.sun.javadoc.ProgramElementDoc;
 import com.sun.javadoc.RootDoc;
 import com.sun.javadoc.Type;
+import com.sun.javadoc.TypeVariable;
 
 /** Generates API definition for a package using the javadoc Doclet API */
 public class ApiDoclet {
@@ -146,19 +148,30 @@ public class ApiDoclet {
         if (!classDoc.isInterface()) {
             classLine += "class ";
         }
+
         classLine += classDoc.name();
+
+        String typeParams = typeParamsFragment(classDoc.typeParameters());
+        classLine += typeParams;
+
+        if (typeParams.equals("")) {
+            classLine += " ";
+        }
+
         if (classDoc.superclass() != null
                 // Ignore trivial superclass
                 && !classDoc.superclass().toString().equals("java.lang.Object")) {
-            classLine += " extends " + classDoc.superclass();
-        }
-        if (classDoc.interfaces().length > 0) {
-            classLine += " implements " + sorted(classDoc.interfaces())
-                .map(ClassDoc::toString)
-                .collect(Collectors.joining(" "));
+            classLine += "extends " + classDoc.superclass() + " ";
         }
 
-        classLine += " {";
+        if (classDoc.interfaces().length > 0) {
+            classLine += "implements " + sorted(classDoc.interfaces())
+                .map(ClassDoc::toString)
+                .collect(Collectors.joining(" "));
+            classLine += " ";
+        }
+
+        classLine += "{";
         return classLine;
     }
 
@@ -208,12 +221,35 @@ public class ApiDoclet {
         }
     }
 
+    private String parametrizedTypeFragment(ParameterizedType type) {
+        String typeArgs =
+                Stream.of(type.typeArguments())
+                        .map(this::typeFragment)
+                        .collect(Collectors.joining(","));
+
+        String fragment = type.qualifiedTypeName();
+
+        if (!typeArgs.equals("")) {
+            fragment += "<" + typeArgs + ">";
+        }
+
+        return fragment + type.dimension();
+    }
+
+    private String typeFragment(Type type) {
+        if (type.asParameterizedType() != null) {
+            return parametrizedTypeFragment(type.asParameterizedType());
+        }
+
+        return type.qualifiedTypeName() + type.dimension();
+    }
+
     private String paramsFragment(ExecutableMemberDoc executable) {
         String fragment = "(";
 
         fragment += Stream.of(executable.parameters())
                 .map(Parameter::type)
-                .map(Type::toString)
+                .map(this::typeFragment)
                 .collect(Collectors.joining(", "));
 
         if (executable.isVarArgs()) {
@@ -231,6 +267,22 @@ public class ApiDoclet {
         return " = " + field.constantValueExpression();
     }
 
+    private String typeParamsFragment(TypeVariable[] typeVariables) {
+        String parameters = Stream.of(typeVariables)
+                .map(TypeVariable::toString)
+                .collect(Collectors.joining(","));
+
+        if (parameters.equals("")) {
+            return "";
+        }
+
+        return "<" + parameters + "> ";
+    }
+
+    private String typeParamsFragment(ExecutableMemberDoc executable) {
+        return typeParamsFragment(executable.typeParameters());
+    }
+
     private String toLine(ProgramElementDoc member) {
         String line = tag(member) + " ";
 
@@ -240,8 +292,12 @@ public class ApiDoclet {
             line += member.modifiers() + " ";
         }
 
+        if (member instanceof ExecutableMemberDoc) {
+            line += typeParamsFragment((ExecutableMemberDoc) member);
+        }
+
         if (member instanceof MethodDoc) {
-            line += ((MethodDoc) member).returnType() + " ";
+            line += (typeFragment(((MethodDoc) member).returnType())) + " ";
         } else if (member instanceof FieldDoc){
             line += ((FieldDoc) member).type() + " ";
         }
