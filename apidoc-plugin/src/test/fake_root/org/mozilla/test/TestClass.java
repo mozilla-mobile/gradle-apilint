@@ -105,4 +105,9 @@ public class TestClass {
     public static interface TestInterfaceTypeVariable<T> {
         public void testTypeVariableMethod(T arg);
     }
+
+    public static enum TestEnum {
+        TestEnumConstantOne,
+        TestEnumConstantTwo,
+    }
 }

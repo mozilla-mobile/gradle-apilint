@@ -86,7 +86,7 @@ class Field():
         raw = raw.split()
         self.split = list(raw)
 
-        for r in ["field", "volatile", "transient", "public", "protected", "static", "final", "deprecated"]:
+        for r in ["field", "enum_constant", "volatile", "transient", "public", "protected", "static", "final", "deprecated"]:
             while r in raw: raw.remove(r)
 
         self.typ = raw[0]
@@ -161,6 +161,8 @@ class Class():
             self.fullname = raw[raw.index("class")+1]
         elif "interface" in raw:
             self.fullname = raw[raw.index("interface")+1]
+        elif "enum" in raw:
+            self.fullname = raw[raw.index("enum")+1]
         else:
             raise ValueError("Funky class type %s" % (self.raw))
 
@@ -232,6 +234,8 @@ def _parse_stream(f, clazz_cb=None):
         elif raw.startswith("    method"):
             clazz.methods.append(Method(clazz, line, raw, blame))
         elif raw.startswith("    field"):
+            clazz.fields.append(Field(clazz, line, raw, blame))
+        elif raw.startswith("    enum_constant"):
             clazz.fields.append(Field(clazz, line, raw, blame))
 
     # Handle last trailing class
