@@ -38,6 +38,16 @@ task testApiLint(type: Exec) {
 
 test.dependsOn testApiLint
 
+// Tests that the expected doclet result is understood by apilint.py
+task integrationTestApiLint(type: Exec) {
+    workingDir '.'
+    commandLine 'python', 'src/main/resources/apilint.py',
+         '../apidoc-plugin/src/test/resources/expected-doclet-output.txt',
+         '../apidoc-plugin/src/test/resources/expected-doclet-output.txt'
+}
+
+test.dependsOn integrationTestApiLint
+
 apply plugin: 'java'
 
 dependencies {

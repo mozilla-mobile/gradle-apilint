@@ -48,6 +48,12 @@
     "test": "test-annotation-remove-class",
     "expected": "INCOMPATIBLE"
   },{
+    "test": "test-enum-field-removed",
+    "expected": "INCOMPATIBLE"
+  },{
+    "test": "test-enum-field-added",
+    "expected": "API_CHANGE"
+  },{
     "test": "test-removed-final-modifier-class",
     "expected": "API_CHANGE"
   },{

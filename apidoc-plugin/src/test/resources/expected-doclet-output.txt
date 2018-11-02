@@ -53,6 +53,13 @@ package org.mozilla.test {
     ctor public TestAbstractClass();
   }
 
+  public static final enum TestClass.TestEnum {
+    method public static org.mozilla.test.TestClass.TestEnum[] values();
+    method public static org.mozilla.test.TestClass.TestEnum valueOf(java.lang.String);
+    enum_constant public static final org.mozilla.test.TestClass.TestEnum TestEnumConstantOne;
+    enum_constant public static final org.mozilla.test.TestClass.TestEnum TestEnumConstantTwo;
+  }
+
   public static class TestClass.TestExtends extends org.mozilla.test.TestClass.TestInterfaceImpl {
     ctor public TestExtends();
   }

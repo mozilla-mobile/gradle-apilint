@@ -122,9 +122,6 @@ public class ApiDoclet {
         sorted(packageDoc.allClasses()).forEach(
                 c -> writeClass(c, writer.indent()));
 
-        sorted(packageDoc.enums()).forEach(
-                c -> writeClass(c, writer.indent()));
-
         writer.line("}");
         writer.newLine();
     }
@@ -145,8 +142,10 @@ public class ApiDoclet {
         String classLine = annotationFragment(classDoc);
         classLine += classDoc.modifiers() + " ";
 
-        if (!classDoc.isInterface()) {
+        if (!classDoc.isInterface() && !classDoc.isEnum()) {
             classLine += "class ";
+        } else if (classDoc.isEnum()) {
+            classLine += "enum ";
         }
 
         classLine += classDoc.name();
@@ -160,7 +159,8 @@ public class ApiDoclet {
 
         if (classDoc.superclass() != null
                 // Ignore trivial superclass
-                && !classDoc.superclass().toString().equals("java.lang.Object")) {
+                && !classDoc.superclass().toString().equals("java.lang.Object")
+                && !classDoc.isEnum()) {
             classLine += "extends " + classDoc.superclass() + " ";
         }
 
