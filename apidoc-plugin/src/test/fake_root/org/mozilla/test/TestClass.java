@@ -4,6 +4,8 @@
 
 package org.mozilla.test;
 
+import java.util.List;
+
 /** Test class used in ApiDocletTest */
 public class TestClass {
     public String testFieldWithoutValue;
@@ -11,6 +13,9 @@ public class TestClass {
 
     public final String testFinalField = "finalValue";
     public final static String testFinalStaticField = "finalStaticValue";
+
+    public final static List<String> TEST_COMPOSITE_TYPE = null;
+    public final static List<List<String>> TEST_NESTED_COMPOSITE_TYPE = null;
 
     protected int testProtectedField;
     int testPackageProtectedField;
@@ -55,6 +60,8 @@ public class TestClass {
     public void testVarArgsOneArg(int ... var1) {}
     public void testVarArgsTwoArgs(int var0, int ... var1) {}
 
+    public void testArrayArg(int[] var) {}
+
     public void testFinalArg(final int arg) {}
 
     protected void testProtectedMethod() {}
@@ -73,4 +80,29 @@ public class TestClass {
     public TestClass(int arg0, float arg1) {}
     @SuppressWarnings("")
     public final static int TEST_HIDDEN_ANNOTATION = 2;
+
+    public <T> void testTypeVariableUnbounded(T arg) {}
+    public <T extends java.lang.Runnable> void testTypeVariableWithBounds(T arg) {}
+    public <T extends java.lang.Runnable & java.lang.Cloneable> void testTypeVariableWithMultipleBounds(T arg) {}
+
+    public <T> T testReturnTypeUnbounded() { return null; }
+    public <T extends java.lang.Runnable> T testReturnTypeWithBound() { return null; }
+
+    public <T> List<List<T>> testReturnNestedCompositeType() { return null; }
+    public <T> void testParamNestedCompositeType(List<List<T>> arg) {}
+
+    public <T> List<T> testReturnCompositeType() { return null; }
+    public <T> void testCompositeParam(List<T> arg) {}
+
+    public static class TestTypeVariable<T> {
+        public void testTypeVariableMethod(T arg);
+    }
+
+    public static class TestTypeBoundVariable<T extends java.lang.Runnable> {
+        public void testTypeVariableMethod(T arg);
+    }
+
+    public static interface TestInterfaceTypeVariable<T> {
+        public void testTypeVariableMethod(T arg);
+    }
 }

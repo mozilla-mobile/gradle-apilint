@@ -16,14 +16,26 @@ package org.mozilla.test {
     method public final void testFinal();
     method public void testVarArgsOneArg(int...);
     method public void testVarArgsTwoArgs(int, int...);
+    method public void testArrayArg(int[]);
     method public void testFinalArg(int);
     method protected void testProtectedMethod();
     method @java.lang.Deprecated public void testAnnotation();
     method public void testHiddenAnnotation();
+    method public <T> void testTypeVariableUnbounded(T);
+    method public <T extends java.lang.Runnable> void testTypeVariableWithBounds(T);
+    method public <T extends java.lang.Runnable & java.lang.Cloneable> void testTypeVariableWithMultipleBounds(T);
+    method public <T> T testReturnTypeUnbounded();
+    method public <T extends java.lang.Runnable> T testReturnTypeWithBound();
+    method public <T> java.util.List<java.util.List<T>> testReturnNestedCompositeType();
+    method public <T> void testParamNestedCompositeType(java.util.List<java.util.List<T>>);
+    method public <T> java.util.List<T> testReturnCompositeType();
+    method public <T> void testCompositeParam(java.util.List<T>);
     field public java.lang.String testFieldWithoutValue;
     field public java.lang.String testFieldWithValue;
     field public final java.lang.String testFinalField = "finalValue";
     field public static final java.lang.String testFinalStaticField = "finalStaticValue";
+    field public static final java.util.List<java.lang.String> TEST_COMPOSITE_TYPE;
+    field public static final java.util.List<java.util.List<java.lang.String>> TEST_NESTED_COMPOSITE_TYPE;
     field protected int testProtectedField;
     field @java.lang.Deprecated public static final int TEST_DEPRECATED_CONST = 1;
     field public static final int TEST_HIDDEN_ANNOTATION = 2;
@@ -57,6 +69,10 @@ package org.mozilla.test {
   public static interface TestClass.TestInterfaceTwo {
   }
 
+  public static interface TestClass.TestInterfaceTypeVariable<T> {
+    method public void testTypeVariableMethod(T);
+  }
+
   public static class TestClass.TestMultipleInterfaceImpl implements org.mozilla.test.TestClass.TestInterface org.mozilla.test.TestClass.TestInterfaceTwo {
     ctor public TestMultipleInterfaceImpl();
     method public void testInterfaceMethod();
@@ -68,6 +84,16 @@ package org.mozilla.test {
 
   public class TestClass.TestSubclass {
     ctor public TestSubclass();
+  }
+
+  public static class TestClass.TestTypeBoundVariable<T extends java.lang.Runnable> {
+    ctor public TestTypeBoundVariable();
+    method public void testTypeVariableMethod(T);
+  }
+
+  public static class TestClass.TestTypeVariable<T> {
+    ctor public TestTypeVariable();
+    method public void testTypeVariableMethod(T);
   }
 
 }
