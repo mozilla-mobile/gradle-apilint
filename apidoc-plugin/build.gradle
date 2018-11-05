@@ -6,25 +6,35 @@ import org.mozilla.apilint.Config
 
 buildDir "${topobjdir}/apidoc-plugin"
 
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
+    }
+}
+
 apply plugin: 'java'
 apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
 dependencies {
     implementation files("${System.properties['java.home']}/../lib/tools.jar")
 }
 
-def javadoc
+def javadocExecutable
 switch (JavaVersion.current()) {
     case JavaVersion.VERSION_1_7:
     case JavaVersion.VERSION_1_8:
-       javadoc = "${System.properties['java.home']}/../bin/javadoc"
+       javadocExecutable = "${System.properties['java.home']}/../bin/javadoc"
        break
 
     case JavaVersion.VERSION_1_9:
     case JavaVersion.VERSION_1_10:
     case JavaVersion.VERSION_11:
     case JavaVersion.VERSION_HIGHER:
-        javadoc = "${System.properties['java.home']}/bin/javadoc"
+        javadocExecutable = "${System.properties['java.home']}/bin/javadoc"
         break
 
     default:
@@ -34,8 +44,8 @@ switch (JavaVersion.current()) {
 task testApiDoclet(type: Exec) {
     workingDir '.'
     commandLine 'python', file('src/test/resources/apidoc_test.py'),
-        '--javadoc', javadoc,
-        '--doclet-jar', "${buildDir}/libs/apidoc-plugin.jar",
+        '--javadoc', javadocExecutable,
+        '--doclet-jar', "${buildDir}/libs/apidoc-plugin-${Config.API_DOC_VERSION}.jar",
         '--java-root', file('src/test/fake_root'),
         '--out-dir', "${buildDir}/tmp",
         '--expected', file('src/test/resources/expected-doclet-output.txt')
@@ -45,14 +55,52 @@ testApiDoclet.dependsOn jar
 
 test.dependsOn testApiDoclet
 
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+    classifier = 'sources'
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    from javadoc.destinationDir
+    classifier = 'javadoc'
+}
+
 publishing {
     publications {
         maven(MavenPublication) {
-            groupId = 'org.mozilla.android'
+            groupId = Config.GROUP
             artifactId = 'apidoc-plugin'
             version = Config.API_DOC_VERSION
 
             from components.java
+            artifact sourcesJar
+            artifact javadocJar
         }
+    }
+}
+
+version = Config.API_DOC_VERSION
+group = Config.GROUP
+
+// Bintray
+Properties properties = new Properties()
+def localProperties = project.rootProject.file('local.properties')
+if (localProperties.exists()) {
+    properties.load(localProperties.newDataInputStream())
+}
+
+bintray {
+    user = properties.getProperty("bintray.user")
+    key = properties.getProperty("bintray.apikey")
+    publications = ['maven']
+    configurations = ['archives']
+    pkg {
+        repo = 'apidoc-plugin'
+        name = Config.GROUP
+        websiteUrl = 'https://github.com/mozilla-mobile/gradle-apilint'
+        vcsUrl = 'https://github.com/mozilla-mobile/gradle-apilint.git'
+        licenses = ["MPL-2.0"]
+        publish = true
+        publicDownloadNumbers = true
     }
 }

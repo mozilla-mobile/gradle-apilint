@@ -3,10 +3,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 plugins {
+    id 'com.gradle.plugin-publish' version '0.10.0'
     id 'java-gradle-plugin'
     id 'groovy'
     id 'maven-publish'
 }
+
+import org.mozilla.apilint.Config
+
+buildDir "${topobjdir}/apilint"
 
 sourceSets {
     main {
@@ -17,16 +22,28 @@ sourceSets {
     }
 }
 
-group 'org.mozilla.android'
+group Config.GROUP
 version '0.1'
-
-buildDir "${topobjdir}/apilint"
 
 gradlePlugin {
     plugins {
         apilint {
-            id = 'org.mozilla.apilint'
+            id = Config.GROUP
             implementationClass = 'org.mozilla.apilint.ApiLintPlugin'
+        }
+    }
+}
+
+pluginBundle {
+    website = 'https://github.com/mozilla-mobile/gradle-apilint'
+    vcsUrl = 'https://github.com/mozilla-mobile/gradle-apilint'
+
+    tags = ['api', 'lint', 'mozilla', 'plugin', 'compatibility']
+    description = 'Tracks the API of an Android library and helps maintain backward compatibility.'
+
+    plugins {
+        apilint {
+            displayName = 'API Lint plugin'
         }
     }
 }
