@@ -53,6 +53,9 @@ package org.mozilla.test {
     ctor public TestAbstractClass();
   }
 
+  public static interface TestClass.TestAnnotation implements java.lang.annotation.Annotation {
+  }
+
   public static final enum TestClass.TestEnum {
     method public static org.mozilla.test.TestClass.TestEnum[] values();
     method public static org.mozilla.test.TestClass.TestEnum valueOf(java.lang.String);
