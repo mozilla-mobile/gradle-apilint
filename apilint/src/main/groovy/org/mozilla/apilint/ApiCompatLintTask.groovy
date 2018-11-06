@@ -29,8 +29,8 @@ class ApiCompatLintTask extends Javadoc {
         options.bootClasspath = [
                 project.file("${System.properties['java.home']}/lib/rt.jar")] + project.android.bootClasspath
 
-        def config = project.configurations.create("apidoc")
-        project.dependencies.add("apidoc", "org.mozilla.android:apidoc-plugin:${Config.API_DOC_VERSION}")
+        def config = project.configurations.create("apidoc-plugin")
+        project.dependencies.add("apidoc-plugin", "org.mozilla.android:apidoc-plugin:${Config.API_DOC_VERSION}")
 
         options.doclet = "org.mozilla.doclet.ApiDoclet"
         options.docletpath = config.files.asType(List)

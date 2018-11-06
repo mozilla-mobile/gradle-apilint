@@ -4,7 +4,7 @@
 
 import org.mozilla.apilint.Config
 
-buildDir "${topobjdir}/apidoc"
+buildDir "${topobjdir}/apidoc-plugin"
 
 apply plugin: 'java'
 apply plugin: 'maven-publish'
@@ -35,7 +35,7 @@ task testApiDoclet(type: Exec) {
     workingDir '.'
     commandLine 'python', file('src/test/resources/apidoc_test.py'),
         '--javadoc', javadoc,
-        '--doclet-jar', "${buildDir}/libs/apidoc.jar",
+        '--doclet-jar', "${buildDir}/libs/apidoc-plugin.jar",
         '--java-root', file('src/test/fake_root'),
         '--out-dir', "${buildDir}/tmp",
         '--expected', file('src/test/resources/expected-doclet-output.txt')
