@@ -5,7 +5,7 @@
 def topsrcdir = rootProject.projectDir.absolutePath
 
 include 'apilint'
-include 'apidoc'
+include 'apidoc-plugin'
 
-project(':apidoc').projectDir = new File("${topsrcdir}/apidoc")
+project(':apidoc-plugin').projectDir = new File("${topsrcdir}/apidoc-plugin")
 project(':apilint').projectDir = new File("${topsrcdir}/apilint")
