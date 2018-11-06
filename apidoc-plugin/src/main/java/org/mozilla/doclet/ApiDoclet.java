@@ -142,7 +142,8 @@ public class ApiDoclet {
         String classLine = annotationFragment(classDoc);
         classLine += classDoc.modifiers() + " ";
 
-        if (!classDoc.isInterface() && !classDoc.isEnum()) {
+        if (!classDoc.isInterface() && !classDoc.isEnum() &&
+                !classDoc.isAnnotationType()) {
             classLine += "class ";
         } else if (classDoc.isEnum()) {
             classLine += "enum ";

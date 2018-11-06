@@ -81,6 +81,8 @@ public class TestClass {
     @SuppressWarnings("")
     public final static int TEST_HIDDEN_ANNOTATION = 2;
 
+    public @interface TestAnnotation {}
+
     public <T> void testTypeVariableUnbounded(T arg) {}
     public <T extends java.lang.Runnable> void testTypeVariableWithBounds(T arg) {}
     public <T extends java.lang.Runnable & java.lang.Cloneable> void testTypeVariableWithMultipleBounds(T arg) {}
