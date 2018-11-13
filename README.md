@@ -28,7 +28,7 @@ Add the following to your project:
 ```
 buildscript {
     dependencies {
-        classpath 'org.mozilla.apilint:apilint:0.1'
+        classpath 'org.mozilla.apilint:apilint:0.1.1'
     }
 }
 
