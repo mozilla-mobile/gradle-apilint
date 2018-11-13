@@ -23,10 +23,15 @@ This gradle plugin adds the following tasks for each variant:
     Prints an help text whenever an API change is detected
 
 ## Usage
-Add the following to your project:
+Add the following to your project's `build.gradle`:
 
 ```
 buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
     dependencies {
         classpath 'org.mozilla.apilint:apilint:0.1.1'
     }
@@ -35,6 +40,9 @@ buildscript {
 apply plugin: 'org.mozilla.apilint'
 apiLint.packageFilter = 'org.your.package.api'
 ```
+
+And make sure that the `apply plugin` line appears after the
+`com.android.library` plugin has been applied.
 
 Then run
 ```
