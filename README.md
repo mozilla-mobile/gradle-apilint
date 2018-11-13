@@ -1,6 +1,5 @@
 # API Lint Gradle Plugin
-Tracks the API of an android library and helps maintaining backwards
-compatibility.
+Tracks the API of an Android library and helps maintain backward compatibility.
 
 ## Tasks
 
