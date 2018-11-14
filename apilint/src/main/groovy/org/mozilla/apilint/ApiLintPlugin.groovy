@@ -56,6 +56,7 @@ class ApiLintPlugin implements Plugin<Project> {
             }
 
             apiLint.dependsOn apiGenerate
+            project.tasks.check.dependsOn apiLint
 
             def apiDiff = project.task("apiDiff${name}", type: Exec) {
                 description = "Prints the diff between the existing API and the local API."
