@@ -21,6 +21,8 @@ class ApiCompatLintTask extends Javadoc {
     @InputFiles
     ArrayList<File> sourcePath
 
+    private final static String CONFIG_NAME = 'apidoc-plugin'
+
     @TaskAction
     @Override
     protected void generate() {
@@ -29,8 +31,13 @@ class ApiCompatLintTask extends Javadoc {
         options.bootClasspath = [
                 project.file("${System.properties['java.home']}/lib/rt.jar")] + project.android.bootClasspath
 
-        def config = project.configurations.create("apidoc-plugin")
-        project.dependencies.add("apidoc-plugin", "${Config.GROUP}:apidoc-plugin:${Config.API_DOC_VERSION}")
+        def config = project.configurations.findByName(CONFIG_NAME)
+
+        if (config == null) {
+            config = project.configurations.create(CONFIG_NAME)
+            project.dependencies.add(CONFIG_NAME,
+                    "${Config.GROUP}:apidoc-plugin:${Config.API_DOC_VERSION}")
+        }
 
         options.doclet = "org.mozilla.doclet.ApiDoclet"
         options.docletpath = config.files.asType(List)
