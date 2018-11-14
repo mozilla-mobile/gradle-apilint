@@ -112,4 +112,40 @@ public class TestClass {
         TestEnumConstantOne,
         TestEnumConstantTwo,
     }
+
+    public static class TestSort {
+        private TestSort() {}
+
+        // Test sorting fields by name
+        public final static int TEST_SORT_C = 1;
+        public final static int TEST_SORT_A = 2;
+        public final static int TEST_SORT_D = 3;
+        public final static int TEST_SORT_B = 4;
+
+        // Test sorting methods by name
+        public void testSortD0();
+        public void testSortA0();
+        public void testSortC0();
+        public void testSortB0();
+
+        // Test that protected methods come after public
+        protected void testSortD1();
+        protected void testSortA1();
+        protected void testSortC1();
+        protected void testSortB1();
+
+        // Test sorting classes by name
+        public static class TestSortA {
+            private TestSortA() {}
+        }
+        public static class TestSortD {
+            private TestSortD() {}
+        }
+        public static class TestSortB {
+            private TestSortB() {}
+        }
+        public static class TestSortC {
+            private TestSortC() {}
+        }
+    }
 }

@@ -81,8 +81,8 @@ public class ApiDoclet {
     public static boolean writeApi(RootDoc root, Writer writer) {
         final ApiDoclet instance = new ApiDoclet();
 
-        Stream.of(root.specifiedPackages()).forEach(
-                p -> instance.writePackage(p, writer));
+        sorted(root.specifiedPackages())
+                .forEach(p -> instance.writePackage(p, writer));
 
         writer.close();
 
@@ -130,10 +130,28 @@ public class ApiDoclet {
         return Stream.of(items).sorted(DOC_COMPARATOR);
     }
 
-    private static final Comparator<Doc> DOC_COMPARATOR =
-        new Comparator<Doc>() {
+    private static final Comparator<Doc> DOC_COMPARATOR = new Comparator<Doc>() {
         @Override
         public int compare(Doc o1, Doc o2) {
+            if (o1 instanceof ProgramElementDoc && o2 instanceof ProgramElementDoc) {
+                return compareProgramElement((ProgramElementDoc) o1, (ProgramElementDoc) o2);
+            }
+
+            return o1.name().compareTo(o2.name());
+        }
+
+        private int compareProgramElement(ProgramElementDoc o1, ProgramElementDoc o2) {
+            // Sort public members before private methods
+            if (o1.isPublic() != o2.isPublic()) {
+                return o1.isPublic() ? -1 : 1;
+            }
+
+            // Then protected members
+            if (o1.isProtected() != o2.isProtected()) {
+                return o2.isProtected() ? -1 : 1;
+            }
+
+            // Otherwise sort by name
             return o1.name().compareTo(o2.name());
         }
     };
@@ -180,10 +198,10 @@ public class ApiDoclet {
         writer.line(toLine(classDoc));
 
         Stream.<Stream<ProgramElementDoc>> of(
-                Stream.of(classDoc.constructors()),
-                Stream.of(classDoc.methods()),
-                Stream.of(classDoc.enumConstants()),
-                Stream.of(classDoc.fields()))
+                sorted(classDoc.constructors()),
+                sorted(classDoc.methods()),
+                sorted(classDoc.enumConstants()),
+                sorted(classDoc.fields()))
             .flatMap(s -> s.map(this::toLine))
             .forEach(writer.indent()::line);
 
