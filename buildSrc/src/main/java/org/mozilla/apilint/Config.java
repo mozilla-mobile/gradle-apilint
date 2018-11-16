@@ -5,6 +5,6 @@
 package org.mozilla.apilint;
 
 public class Config {
-    public final static String API_DOC_VERSION = "0.1.2";
+    public final static String API_DOC_VERSION = "0.1.3";
     public final static String GROUP = "org.mozilla.apilint";
 }
