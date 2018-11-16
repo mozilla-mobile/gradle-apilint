@@ -26,7 +26,7 @@ $ git blame api/current.txt -t -e > /tmp/currentblame.txt
 $ apilint.py /tmp/currentblame.txt previous.txt --no-color
 """
 
-import re, sys, collections, traceback, argparse
+import re, sys, collections, traceback, argparse, json
 
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -125,8 +125,7 @@ class Method():
         self.annotations = [
             Annotation(self, line, a, blame) for a in raw if a.startswith("@")]
 
-        for a in self.annotations:
-            while a in raw: raw.remove("@" + a.ident)
+        raw = [x for x in raw if not x.startswith("@")]
 
         self.typ = raw[0]
         self.name = raw[1]
@@ -251,6 +250,8 @@ class Failure():
         self.error = error
         self.rule = rule
         self.msg = msg
+        self.clazz = clazz
+        self.detail = detail
 
         if error:
             self.head = "Error %s" % (rule) if rule else "Error"
@@ -276,6 +277,15 @@ class Failure():
     def __repr__(self):
         return self.dump
 
+    def json(self):
+        return {
+            'rule': repr(self.rule),
+            'msg': self.msg,
+            'detail': repr(self.detail),
+            'line': repr(self.line),
+            'class': repr(self.clazz),
+            'pkg': repr(self.clazz.pkg),
+        }
 
 failures = {}
 
@@ -1541,6 +1551,22 @@ def show_deprecations_at_birth(cur, prev):
         print("")
 
 
+def dump_result_json(args, compat_fail, api_changes, failures):
+    if not 'result_json' in args or not args['result_json']:
+        return
+
+    result = {
+        'compat_failures': [compat_fail[x].json() for x in compat_fail],
+        'api_changes': [x for x in api_changes],
+        'failures': [failures[x].json() for x in failures],
+    }
+
+    result['failure'] = ((compat_fail is not None and len(compat_fail) != 0)
+            or (api_changes is not None and len(api_changes) != 0)
+            or (failures is not None and len(failures) != 0))
+
+    json.dump(result, args['result_json'])
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Enforces common Android public API design \
             patterns. It ignores lint messages from a previous API level, if provided.")
@@ -1555,6 +1581,7 @@ if __name__ == "__main__":
             help="Show API changes noticed")
     parser.add_argument("--show-deprecations-at-birth", action='store_const', const=True,
             help="Show API deprecations at birth")
+    parser.add_argument("--result-json", help="Put result in JSON file.", type=argparse.FileType('w'))
     args = vars(parser.parse_args())
 
     if args['no_color']:
@@ -1573,6 +1600,8 @@ if __name__ == "__main__":
             prev = _parse_stream(f)
         show_deprecations_at_birth(cur, prev)
         sys.exit()
+
+    compat_fail = None
 
     with current_file as f:
         cur_fail, cur_noticed, cur = examine_stream(f)
@@ -1593,12 +1622,15 @@ if __name__ == "__main__":
         # look for compatibility issues
         compat_fail = verify_compat(cur, prev)
 
-        if len(compat_fail):
-            print("%s API compatibility issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
-            for f in sorted(compat_fail):
-                print(compat_fail[f])
-                print("")
-            sys.exit(131)
+    dump_result_json(args, compat_fail, cur_noticed, cur_fail)
+
+    if compat_fail and len(compat_fail) != 0:
+        print("%s API compatibility issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
+        failures = []
+        for f in sorted(compat_fail):
+            print(compat_fail[f])
+            print("")
+        sys.exit(131)
 
     if args['show_noticed'] and len(cur_noticed) != 0:
         print("%s API changes noticed %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))

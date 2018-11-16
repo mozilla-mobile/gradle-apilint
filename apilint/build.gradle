@@ -50,7 +50,8 @@ pluginBundle {
 
 task testApiLint(type: Exec) {
     workingDir '.'
-    commandLine 'python', 'src/test/resources/apilint_test.py'
+    commandLine 'python', 'src/test/resources/apilint_test.py',
+        '--build-dir', buildDir
 }
 
 test.dependsOn testApiLint
