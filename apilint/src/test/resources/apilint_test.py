@@ -2,10 +2,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import subprocess as sp
-import os
-import sys
+import argparse
 import json
+import os
+import subprocess as sp
+import sys
 
 TEST_DIR = "src/test/resources/apilint_test/"
 
@@ -14,6 +15,10 @@ ERROR_CODES = {
     'API_CHANGE': 10,
     'INCOMPATIBLE': 131,
 }
+
+parser = argparse.ArgumentParser(description="Tests for apilint.py.")
+parser.add_argument("--build-dir", help="Build directory location")
+args = parser.parse_args()
 
 with open(TEST_DIR + "tests.py") as f:
     tests = json.load(f)
@@ -31,8 +36,11 @@ for t in tests:
 
     print("")
 
+    json_file = "{}/{}-result.json".format(args.build_dir, t["test"])
     test = ["python", "src/main/resources/apilint.py",
+            "--result-json", json_file,
             after_api, before_api, "--show-noticed"]
+
     error_code = sp.call(test)
 
     expected_error_code = ERROR_CODES[t["expected"]]
@@ -42,3 +50,22 @@ for t in tests:
                                                   error_code))
          print(" ".join(test))
          sys.exit(1)
+
+    with open(json_file) as f:
+        json_result = json.load(f)
+
+    print(json.dumps(json_result, indent=2))
+
+    assert len(json_result['failures']) == 0
+
+    if t['expected'] == 'INCOMPATIBLE':
+        assert len(json_result['compat_failures']) == 1
+    else:
+        assert len(json_result['compat_failures']) == 0
+
+    if t['expected'] == 'API_CHANGE':
+        assert len(json_result['api_changes']) > 0
+
+    if t['expected'] == 'NO_CHANGE':
+        assert len(json_result['api_changes']) == 0
+        assert json_result['failure'] == False

@@ -53,6 +53,9 @@ class ApiLintPlugin implements Plugin<Project> {
                 args '--show-noticed'
                 args apiFile
                 args currentApiFile
+                args '--result-json'
+                args project.file(
+                        "${variant.javaCompile.destinationDir}/${extension.jsonResultFileName}")
             }
 
             apiLint.dependsOn apiGenerate

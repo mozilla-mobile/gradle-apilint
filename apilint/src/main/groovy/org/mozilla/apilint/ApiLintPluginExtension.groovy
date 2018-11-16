@@ -6,4 +6,5 @@ class ApiLintPluginExtension {
     String packageFilter = '.' // By default all packages are part of the api
     String apiOutputFileName = 'api.txt'
     String currentApiRelativeFilePath = 'api.txt'
+    String jsonResultFileName = 'apilint-result.json'
 }
