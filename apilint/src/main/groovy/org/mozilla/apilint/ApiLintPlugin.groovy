@@ -61,6 +61,22 @@ class ApiLintPlugin implements Plugin<Project> {
             apiLint.dependsOn apiGenerate
             project.tasks.check.dependsOn apiLint
 
+            if (extension.changelogFileName) {
+                def apiChangelogCheck = project.task("apiChangelogCheck${name}", type: PythonExec) {
+                    description = "Checks that the API changelog has been updated."
+                    group = 'Verification'
+                    workingDir '.'
+                    scriptPath 'changelog-check.py'
+                    args '--api-file'
+                    args apiFile
+                    args '--changelog-file'
+                    args project.file(extension.changelogFileName)
+                }
+
+                apiChangelogCheck.dependsOn apiGenerate
+                apiLint.dependsOn apiChangelogCheck
+            }
+
             def apiDiff = project.task("apiDiff${name}", type: Exec) {
                 description = "Prints the diff between the existing API and the local API."
                 workingDir '.'
