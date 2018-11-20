@@ -37,7 +37,7 @@ buildscript {
         }
     }
     dependencies {
-        classpath 'org.mozilla.apilint:apilint:0.1.3'
+        classpath 'org.mozilla.apilint:apilint:0.1.4'
     }
 }
 

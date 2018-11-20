@@ -23,7 +23,7 @@ sourceSets {
 }
 
 group Config.GROUP
-version '0.1.3'
+version '0.1.4'
 
 gradlePlugin {
     plugins {
