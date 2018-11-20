@@ -7,4 +7,5 @@ class ApiLintPluginExtension {
     String apiOutputFileName = 'api.txt'
     String currentApiRelativeFilePath = 'api.txt'
     String jsonResultFileName = 'apilint-result.json'
+    String changelogFileName
 }

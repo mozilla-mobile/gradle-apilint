@@ -22,6 +22,10 @@ This gradle plugin adds the following tasks for each variant:
 - `apiLintHelp${variantName}`
     Prints an help text whenever an API change is detected
 
+- `apiChangelogCheck${variantName}`
+    Only if apiLint.changelogFileName is set. Checks that the changelog file is
+    updated every time the api.txt file changes.
+
 ## Usage
 Add the following to your project's `build.gradle`:
 
@@ -46,19 +50,45 @@ And make sure that the `apply plugin` line appears after the
 
 Then run
 ```
-$ ./gradlew apiUpdateFile$VARIANT_NAME
+$ ./gradlew apiUpdateFile${variantName}
 ```
 
-Where `$VARIANT_NAME` is a variant for your library. This will create an API
+Where `${variantName}` is a variant for your library. This will create an API
 file that contains a description of your library's API, by default this file
 will be called `api.txt`.
 
 After you make changes to your code, run:
 
 ```
-$ ./gradlew apiLint$VARIANT_NAME
+$ ./gradlew apiLint${variantName}
 ```
 
 to check that the API of your library did not change. You can always run
-`apiUpdateFile$VARIANT_NAME` to update the API file (e.g. when adding new
+`apiUpdateFile${variantName}` to update the API file (e.g. when adding new
 APIs).
+
+### Changelog
+
+Optionally, `apilint` can track your API changelog file and fail the build if
+the changelog file has not been updated after an API change. To enable this
+feature, add the following to your `build.gradle`:
+
+```
+apiLint.changelogFileName = 'CHANGELOG.md'
+```
+
+And then add the following line somewhere in your changelog file:
+
+```
+[api-version]: <api-txt-sha1>
+```
+
+where `<api-txt-sha1>` is the SHA1 of the current api file. You can obtain this
+value by running:
+
+```
+./gradlew apiChangelogCheck${variantName}
+```
+
+Now, whenever `./gradlew apiLint${variantName}` is invoked, it will check that
+the changelog file version matches the generated api file version.
