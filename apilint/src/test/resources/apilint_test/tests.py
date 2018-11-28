@@ -69,6 +69,14 @@
     "test": "test-annotation-add-class",
     "expected": "API_CHANGE"
   },{
+    "test": "test-fields-only-class",
+    "expected": "API_ERROR",
+    "rule": "GV1"
+  },{
+    "test": "test-fields-only-class-final",
+    "expected": "API_ERROR",
+    "rule": "GV2"
+  },{
     "test": "test-whitespace-change",
     "expected": "NO_CHANGE"
   },{

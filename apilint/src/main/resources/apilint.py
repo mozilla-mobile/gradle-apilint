@@ -279,7 +279,7 @@ class Failure():
 
     def json(self):
         return {
-            'rule': repr(self.rule),
+            'rule': self.rule,
             'msg': self.msg,
             'detail': repr(self.detail),
             'line': repr(self.line),
@@ -507,44 +507,28 @@ def verify_protected(clazz):
         if "protected" in f.split:
             error(clazz, f, "M7", "Protected fields not allowed; must be public")
 
+def verify_final_fields_only_class(clazz):
+    if clazz.methods or not clazz.fields:
+        # Not a final field-only class
+        return
+
+    for f in clazz.fields:
+        if "final" not in f.split:
+            # Not a final field-only class
+            return
+
+    if not clazz.ctors:
+        error(clazz, None, "GV1", "Field-only classes need at least one constructor for mocking.")
+
+    if "final" in clazz.split:
+        error(clazz, None, "GV2", "Field-only classes should not be final for mocking.")
 
 def verify_fields(clazz):
     """Verify that all exposed fields are final.
     Exposed fields must follow myName style.
     Catch internal mFoo objects being exposed."""
 
-    IGNORE_BARE_FIELDS = [
-        "android.app.ActivityManager.RecentTaskInfo",
-        "android.app.Notification",
-        "android.content.pm.ActivityInfo",
-        "android.content.pm.ApplicationInfo",
-        "android.content.pm.ComponentInfo",
-        "android.content.pm.ResolveInfo",
-        "android.content.pm.FeatureGroupInfo",
-        "android.content.pm.InstrumentationInfo",
-        "android.content.pm.PackageInfo",
-        "android.content.pm.PackageItemInfo",
-        "android.content.res.Configuration",
-        "android.graphics.BitmapFactory.Options",
-        "android.os.Message",
-        "android.system.StructPollfd",
-    ]
-
     for f in clazz.fields:
-        if not "final" in f.split:
-            if clazz.fullname in IGNORE_BARE_FIELDS:
-                pass
-            elif clazz.fullname.endswith("LayoutParams"):
-                pass
-            elif clazz.fullname.startswith("android.util.Mutable"):
-                pass
-            else:
-                error(clazz, f, "F2", "Bare fields must be marked final, or add accessors if mutable")
-
-        if not "static" in f.split:
-            if not re.match("[a-z]([a-zA-Z]+)?", f.name):
-                error(clazz, f, "S1", "Non-static fields must be named using myField style")
-
         if re.match("[ms][A-Z]", f.name):
             error(clazz, f, "F1", "Internal objects must not be exposed")
 
@@ -1433,6 +1417,7 @@ def examine_clazz(clazz):
     verify_tense(clazz)
     verify_icu(clazz)
     verify_clone(clazz)
+    verify_final_fields_only_class(clazz)
 
 
 def examine_stream(stream):
@@ -1632,6 +1617,13 @@ if __name__ == "__main__":
             print("")
         sys.exit(131)
 
+    if len(cur_fail) != 0:
+        print("%s API style issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
+        for f in sorted(cur_fail):
+            print(cur_fail[f])
+            print("")
+        sys.exit(77)
+
     if args['show_noticed'] and len(cur_noticed) != 0:
         print("%s API changes noticed %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
         for f in sorted(cur_noticed.keys()):
@@ -1639,9 +1631,3 @@ if __name__ == "__main__":
         print("")
         sys.exit(10)
 
-    if len(cur_fail) != 0:
-        print("%s API style issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
-        for f in sorted(cur_fail):
-            print(cur_fail[f])
-            print("")
-        sys.exit(77)

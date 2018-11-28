@@ -13,6 +13,7 @@ TEST_DIR = "src/test/resources/apilint_test/"
 ERROR_CODES = {
     'NO_CHANGE': 0,
     'API_CHANGE': 10,
+    'API_ERROR': 77,
     'INCOMPATIBLE': 131,
 }
 
@@ -43,6 +44,11 @@ for t in tests:
 
     error_code = sp.call(test)
 
+    with open(json_file) as f:
+        json_result = json.load(f)
+
+    print(json.dumps(json_result, indent=2))
+
     expected_error_code = ERROR_CODES[t["expected"]]
     if error_code != expected_error_code:
          print("The following test is expected to fail with {} "
@@ -51,12 +57,8 @@ for t in tests:
          print(" ".join(test))
          sys.exit(1)
 
-    with open(json_file) as f:
-        json_result = json.load(f)
-
-    print(json.dumps(json_result, indent=2))
-
-    assert len(json_result['failures']) == 0
+    if t['expected'] != 'API_ERROR':
+        assert len(json_result['failures']) == 0
 
     if t['expected'] == 'INCOMPATIBLE':
         assert len(json_result['compat_failures']) == 1
@@ -65,6 +67,11 @@ for t in tests:
 
     if t['expected'] == 'API_CHANGE':
         assert len(json_result['api_changes']) > 0
+
+    if t['expected'] == 'API_ERROR':
+        assert len(json_result['failures']) > 0
+        assert json_result['failure'] == True
+        assert json_result['failures'][0]['rule'] == t['rule']
 
     if t['expected'] == 'NO_CHANGE':
         assert len(json_result['api_changes']) == 0
