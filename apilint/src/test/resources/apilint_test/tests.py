@@ -71,10 +71,12 @@
   },{
     "test": "test-fields-only-class",
     "expected": "API_ERROR",
+    "filter": "GV",
     "rule": "GV1"
   },{
     "test": "test-fields-only-class-final",
     "expected": "API_ERROR",
+    "filter": "GV",
     "rule": "GV2"
   },{
     "test": "test-whitespace-change",

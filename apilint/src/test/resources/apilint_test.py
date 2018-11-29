@@ -40,7 +40,9 @@ for t in tests:
     json_file = "{}/{}-result.json".format(args.build_dir, t["test"])
     test = ["python", "src/main/resources/apilint.py",
             "--result-json", json_file,
-            after_api, before_api, "--show-noticed"]
+            after_api, before_api,
+            "--filter-errors", t["filter"] if "filter" in t else "NONE",
+            "--show-noticed"]
 
     error_code = sp.call(test)
 
