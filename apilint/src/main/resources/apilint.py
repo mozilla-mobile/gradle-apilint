@@ -1552,6 +1552,12 @@ def dump_result_json(args, compat_fail, api_changes, failures):
 
     json.dump(result, args['result_json'])
 
+def matches_filter(filter_, failure):
+    for f in filter_:
+        if failure.rule is not None and failure.rule.startswith(f):
+            return True
+    return False
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Enforces common Android public API design \
             patterns. It ignores lint messages from a previous API level, if provided.")
@@ -1566,6 +1572,9 @@ if __name__ == "__main__":
             help="Show API changes noticed")
     parser.add_argument("--show-deprecations-at-birth", action='store_const', const=True,
             help="Show API deprecations at birth")
+    parser.add_argument("--filter-errors", nargs='*',
+            help="Provide a list of erorr codes to consider. Filter will "
+            "select only error codes that starts with the codes specified.")
     parser.add_argument("--result-json", help="Put result in JSON file.", type=argparse.FileType('w'))
     args = vars(parser.parse_args())
 
@@ -1586,7 +1595,7 @@ if __name__ == "__main__":
         show_deprecations_at_birth(cur, prev)
         sys.exit()
 
-    compat_fail = None
+    compat_fail = []
 
     with current_file as f:
         cur_fail, cur_noticed, cur = examine_stream(f)
@@ -1606,6 +1615,14 @@ if __name__ == "__main__":
 
         # look for compatibility issues
         compat_fail = verify_compat(cur, prev)
+
+    # filter errors if filter was specified
+    if args['filter_errors'] is not None:
+        filtered_fail = {}
+        for p in cur_fail:
+            if matches_filter(args['filter_errors'], cur_fail[p]):
+                filtered_fail[p] = cur_fail[p]
+        cur_fail = filtered_fail
 
     dump_result_json(args, compat_fail, cur_noticed, cur_fail)
 
