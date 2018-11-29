@@ -5,7 +5,7 @@ Tracks the API of an Android library and helps maintain backward compatibility.
 The apilint plugin provies the following tasks.
 
 <code><b>apiLint<i>VariantName</i></b></code> Checks that the current API is
-backwards compatible with the api specified in a file, by default located in
+backward compatible with the API specified in a file, by default located in
 `//api.txt`. This task also checks for various lints as specified in
 [apilint.py](apilint/src/main/resources/apilint.py).
 
