@@ -523,6 +523,32 @@ def verify_final_fields_only_class(clazz):
     if "final" in clazz.split:
         error(clazz, None, "GV2", "Field-only classes should not be final for mocking.")
 
+def verify_threading_annotations(clazz):
+    THREADING_ANNOTATIONS = [
+        "android.support.annotation.MainThread",
+        "android.support.annotation.UiThread",
+        "android.support.annotation.WorkerThread",
+        "android.support.annotation.BinderThread",
+        "android.support.annotation.AnyThread",
+    ]
+
+    # If the annotation is on the class than it applies to every method
+    for a in clazz.annotations:
+        if repr(a) in THREADING_ANNOTATIONS:
+            return []
+
+    # Otherwise check all methods
+    methods = []
+    for f in clazz.methods:
+        has_annotation = False
+        for a in f.annotations:
+            if repr(a) in THREADING_ANNOTATIONS:
+                has_annotation = True
+        if not has_annotation:
+            error(clazz, f, "GV3", "Method missing threading annotation. Needs "
+                "one of: @MainThread, @UiThread, @WorkerThread, @BinderThread, "
+                "@AnyThread.")
+
 def verify_fields(clazz):
     """Verify that all exposed fields are final.
     Exposed fields must follow myName style.
@@ -1418,6 +1444,7 @@ def examine_clazz(clazz):
     verify_icu(clazz)
     verify_clone(clazz)
     verify_final_fields_only_class(clazz)
+    verify_threading_annotations(clazz)
 
 
 def examine_stream(stream):
