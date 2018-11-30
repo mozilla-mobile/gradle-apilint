@@ -56,6 +56,19 @@ package org.mozilla.test {
   public static interface TestClass.TestAnnotation implements java.lang.annotation.Annotation {
   }
 
+  @java.lang.Deprecated public static class TestClass.TestAnnotationBase {
+    method @java.lang.Deprecated public void methodToOverride();
+  }
+
+  @java.lang.Deprecated public static class TestClass.TestAnnotationChildDuplicateAnnotation extends org.mozilla.test.TestClass.TestAnnotationBase {
+    method @java.lang.Deprecated public void methodToOverride();
+  }
+
+  @java.lang.Deprecated public static class TestClass.TestAnnotationChildShouldHaveAnnotation extends org.mozilla.test.TestClass.TestAnnotationBase {
+    method @java.lang.Deprecated public void methodToOverride();
+    method public void methodToOverride(int);
+  }
+
   public static final enum TestClass.TestEnum {
     method public static org.mozilla.test.TestClass.TestEnum valueOf(java.lang.String);
     method public static org.mozilla.test.TestClass.TestEnum[] values();

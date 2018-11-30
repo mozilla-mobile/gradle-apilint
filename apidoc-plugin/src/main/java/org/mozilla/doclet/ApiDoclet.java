@@ -7,8 +7,11 @@ package org.mozilla.doclet;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -156,8 +159,26 @@ public class ApiDoclet {
         }
     };
 
+    /** Collects all annotations in the class hierarchy. */
+    private List<AnnotationDesc> collectHierarchyAnnotations(ClassDoc classDoc,
+                                                             List<AnnotationDesc> annotations) {
+         annotations.addAll(Arrays.asList(classDoc.annotations()));
+
+         if (classDoc.superclass() != null) {
+             collectHierarchyAnnotations(classDoc.superclass(), annotations);
+         }
+
+         return annotations;
+    }
+
+    private List<AnnotationDesc> collectHierarchyAnnotations(ClassDoc classDoc) {
+        return collectHierarchyAnnotations(classDoc, new ArrayList<AnnotationDesc>());
+    }
+
     private String toLine(ClassDoc classDoc) {
-        String classLine = annotationFragment(classDoc);
+        String classLine = annotationFragment(
+                collectHierarchyAnnotations(classDoc).stream());
+
         classLine += classDoc.modifiers() + " ";
 
         if (!classDoc.isInterface() && !classDoc.isEnum() &&
@@ -209,17 +230,21 @@ public class ApiDoclet {
         writer.newLine();
     }
 
-    private Stream<String> from(AnnotationDesc[] annotation) {
-        return Stream.of(annotation)
-                    .map(AnnotationDesc::annotationType)
+    private Stream<String> from(Stream<AnnotationDesc> annotations) {
+        return annotations.map(AnnotationDesc::annotationType)
                     .map(AnnotationTypeDoc::toString)
                     .filter(ANNOTATIONS::contains)
                     .map(s -> "@" + s);
     }
 
     private String annotationFragment(ProgramElementDoc member) {
-        String fragment = from(member.annotations())
-               .collect(Collectors.joining(" "));
+        return annotationFragment(Stream.of(member.annotations()));
+    }
+
+    private String annotationFragment(Stream<AnnotationDesc> annotations) {
+        String fragment = from(annotations)
+                .distinct()
+                .collect(Collectors.joining(" "));
         if (fragment.equals("")) {
             return "";
         }
@@ -302,10 +327,43 @@ public class ApiDoclet {
         return typeParamsFragment(executable.typeParameters());
     }
 
+    private ExecutableMemberDoc findSuperMethod(ExecutableMemberDoc member) {
+        ClassDoc superClass = member.containingClass().superclass();
+        if (superClass == null) {
+            return null;
+        }
+
+        return Stream.of(superClass.methods())
+                .filter(m -> m.name().equals(member.name())
+                            && paramsFragment(m).equals(paramsFragment(member)))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private List<AnnotationDesc> collectMethodHierarchyAnnotations(
+            ProgramElementDoc member,
+            List<AnnotationDesc> annotations) {
+        annotations.addAll(Arrays.asList(member.annotations()));
+
+        if (member instanceof ExecutableMemberDoc) {
+            ProgramElementDoc superMethod = findSuperMethod((ExecutableMemberDoc) member);
+            if (superMethod != null) {
+                collectMethodHierarchyAnnotations(superMethod, annotations);
+            }
+        }
+
+        return annotations;
+    }
+
+    private List<AnnotationDesc> collectMethodHierarchyAnnotations(ProgramElementDoc member) {
+        return collectMethodHierarchyAnnotations(member, new ArrayList<AnnotationDesc>());
+    }
+
     private String toLine(ProgramElementDoc member) {
         String line = tag(member) + " ";
 
-        line += annotationFragment(member);
+        line += annotationFragment(
+                collectMethodHierarchyAnnotations(member).stream());
 
         if (!member.modifiers().equals("")) {
             line += member.modifiers() + " ";
