@@ -36,6 +36,33 @@ public class TestClass {
     }
     public static class TestExtends extends TestInterfaceImpl {}
 
+    @Deprecated
+    public static class TestAnnotationBase {
+        private TestAnnotationBase();
+
+        @Deprecated
+        public void methodToOverride();
+    }
+
+    public static class TestAnnotationChildShouldHaveAnnotation extends TestAnnotationBase {
+        private TestAnnotationChildShouldHaveAnnotation();
+
+        @Override
+        public void methodToOverride();
+
+        // NOTE: Not @Override
+        public void methodToOverride(int overload);
+    }
+
+    @Deprecated
+    public static class TestAnnotationChildDuplicateAnnotation extends TestAnnotationBase {
+        private TestAnnotationChildDuplicateAnnotation();
+
+        @Override
+        @Deprecated
+        public void methodToOverride();
+    }
+
     public TestClass() {}
     public TestClass(String arg1) {}
     public TestClass(String arg1, int arg2) {}
