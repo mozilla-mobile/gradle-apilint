@@ -45,9 +45,8 @@ class ApiLintPlugin implements Plugin<Project> {
 
             apiGenerate.dependsOn variant.javaCompile
 
-            def apiLint = project.task("apiLint${name}", type: PythonExec) {
-                description = "Runs API lint checks for variant ${name}"
-                group = 'Verification'
+            def apiCompatLint = project.task("apiCompatLint${name}", type: PythonExec) {
+                description = "Runs API compatibility lint checks for variant ${name}"
                 workingDir '.'
                 scriptPath 'apilint.py'
                 args '--show-noticed'
@@ -58,7 +57,24 @@ class ApiLintPlugin implements Plugin<Project> {
                         "${variant.javaCompile.destinationDir}/${extension.jsonResultFileName}")
             }
 
-            apiLint.dependsOn apiGenerate
+            apiCompatLint.dependsOn apiGenerate
+
+            def apiLint = project.task("apiLint${name}", type: PythonExec) {
+                description = "Runs API lint checks for variant ${name}"
+                group = 'Verification'
+                workingDir '.'
+                scriptPath 'apilint.py'
+                args currentApiFile
+                args '--result-json'
+                args project.file(
+                        "${variant.javaCompile.destinationDir}/${extension.jsonResultFileName}")
+                if (extension.lintFilters != null) {
+                    args '--filter-errors'
+                    args extension.lintFilters
+                }
+            }
+
+            apiLint.dependsOn apiCompatLint
             project.tasks.check.dependsOn apiLint
 
             if (extension.changelogFileName) {
@@ -74,7 +90,7 @@ class ApiLintPlugin implements Plugin<Project> {
                 }
 
                 apiChangelogCheck.dependsOn apiGenerate
-                apiLint.dependsOn apiChangelogCheck
+                apiCompatLint.dependsOn apiChangelogCheck
             }
 
             def apiDiff = project.task("apiDiff${name}", type: Exec) {
@@ -107,7 +123,7 @@ class ApiLintPlugin implements Plugin<Project> {
             }
 
             apiLintHelp.dependsOn apiDiff
-            apiLint.finalizedBy apiLintHelp
+            apiCompatLint.finalizedBy apiLintHelp
 
             def apiUpdate = project.task("apiUpdateFile${name}", type: Copy) {
                 description = "Updates the API file from the local one for variant ${name}"

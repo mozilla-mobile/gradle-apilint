@@ -105,6 +105,7 @@ apiLint {
     currentApiRelativeFilePath = 'api.txt'
     jsonResultFileName = 'apilint-result.json'
     changelogFileName = null
+    lintFilters = null
 }
 ```
 
@@ -122,3 +123,7 @@ contains the result of apilint.
 
 <code><b>changelogFileName</b></code> Relative path to the changelog file,
 optional. See also [Changelog](#changelog).
+
+<code><b>lintFilters</b></code> List of lints that fail the build, by default
+all lints can fail the build. Filters will match any error code that starts
+with the string specified, e.g. `GV` will match `GV1`, `GV2`, ...
