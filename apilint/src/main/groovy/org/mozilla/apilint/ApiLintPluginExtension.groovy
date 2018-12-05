@@ -8,4 +8,5 @@ class ApiLintPluginExtension {
     String currentApiRelativeFilePath = 'api.txt'
     String jsonResultFileName = 'apilint-result.json'
     String changelogFileName
+    List<String> lintFilters
 }

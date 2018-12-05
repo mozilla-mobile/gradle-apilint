@@ -1651,7 +1651,8 @@ if __name__ == "__main__":
                 filtered_fail[p] = cur_fail[p]
         cur_fail = filtered_fail
 
-    dump_result_json(args, compat_fail, cur_noticed, cur_fail)
+    dump_result_json(args, compat_fail,
+        cur_noticed if args['show_noticed'] else [], cur_fail)
 
     if compat_fail and len(compat_fail) != 0:
         print("%s API compatibility issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
