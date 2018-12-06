@@ -59,9 +59,8 @@ class ApiLintPlugin implements Plugin<Project> {
 
             apiCompatLint.dependsOn apiGenerate
 
-            def apiLint = project.task("apiLint${name}", type: PythonExec) {
+            def apiLintSingle = project.task("apiLintSingle${name}", type: PythonExec) {
                 description = "Runs API lint checks for variant ${name}"
-                group = 'Verification'
                 workingDir '.'
                 scriptPath 'apilint.py'
                 args currentApiFile
@@ -74,8 +73,13 @@ class ApiLintPlugin implements Plugin<Project> {
                 }
             }
 
-            apiLint.dependsOn apiCompatLint
-            project.tasks.check.dependsOn apiLint
+            apiCompatLint.dependsOn apiLintSingle
+            apiLintSingle.dependsOn apiGenerate
+
+            def apiLint = project.task("apiLint${name}") {
+                description = "Runs API lint checks for variant ${name}"
+                group = 'Verification'
+            }
 
             if (extension.changelogFileName) {
                 def apiChangelogCheck = project.task("apiChangelogCheck${name}", type: PythonExec) {
@@ -90,8 +94,13 @@ class ApiLintPlugin implements Plugin<Project> {
                 }
 
                 apiChangelogCheck.dependsOn apiGenerate
-                apiCompatLint.dependsOn apiChangelogCheck
+                apiChangelogCheck.dependsOn apiCompatLint
+                apiLint.dependsOn apiChangelogCheck
+            } else {
+                apiLint.dependsOn apiLintSingle
             }
+
+            project.tasks.check.dependsOn apiLint
 
             def apiDiff = project.task("apiDiff${name}", type: Exec) {
                 description = "Prints the diff between the existing API and the local API."
@@ -110,7 +119,7 @@ class ApiLintPlugin implements Plugin<Project> {
             def apiLintHelp = project.task("apiLintHelp${name}") {
                 description = "Prints help for when an API change is detected."
                 onlyIf {
-                    apiLint.state.failure != null
+                    apiCompatLint.state.failure != null
                 }
                 doLast {
                     println ""
