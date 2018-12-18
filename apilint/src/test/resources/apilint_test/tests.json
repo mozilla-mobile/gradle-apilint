@@ -71,18 +71,20 @@
   },{
     "test": "test-fields-only-class",
     "expected": "API_ERROR",
+    "check_compat": false,
     "filter": "GV",
     "rule": "GV1"
   },{
     "test": "test-fields-only-class-final",
     "expected": "API_ERROR",
+    "check_compat": false,
     "filter": "GV",
     "rule": "GV2"
   },{
     "test": "test-whitespace-change",
-    "expected": "NO_CHANGE"
+    "expected": "SUCCESS"
   },{
     "test": "test-reoder-class",
-    "expected": "NO_CHANGE"
+    "expected": "SUCCESS"
   }
 ]
