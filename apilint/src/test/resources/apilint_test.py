@@ -11,7 +11,7 @@ import sys
 TEST_DIR = "src/test/resources/apilint_test/"
 
 ERROR_CODES = {
-    'NO_CHANGE': 0,
+    'SUCCESS': 0,
     'API_CHANGE': 10,
     'API_ERROR': 77,
     'INCOMPATIBLE': 131,
@@ -21,28 +21,39 @@ parser = argparse.ArgumentParser(description="Tests for apilint.py.")
 parser.add_argument("--build-dir", help="Build directory location")
 args = parser.parse_args()
 
-with open(TEST_DIR + "tests.py") as f:
+with open(TEST_DIR + "tests.json") as f:
     tests = json.load(f)
 
 for t in tests:
     print("Running {}, expected {}:".format(t["test"], t["expected"]))
     test_base = TEST_DIR + t["test"]
+    check_compat = "check_compat" not in t or t["check_compat"]
 
-    before_api = test_base + ".before.txt"
-    after_api = test_base + ".after.txt"
+    if check_compat:
+        before_api = test_base + ".before.txt"
+        after_api = test_base + ".after.txt"
+    else:
+        after_api = test_base + ".txt"
 
-    sp.call(["diff", "-U5",
-             before_api, "--label", "before.txt",
-             after_api, "--label", "after.txt"])
+    if check_compat:
+        sp.call(["diff", "-U5",
+                 before_api, "--label", "before.txt",
+                 after_api, "--label", "after.txt"])
 
     print("")
 
     json_file = "{}/{}-result.json".format(args.build_dir, t["test"])
     test = ["python", "src/main/resources/apilint.py",
             "--result-json", json_file,
-            after_api, before_api,
-            "--filter-errors", t["filter"] if "filter" in t else "NONE",
-            "--show-noticed"]
+            after_api]
+
+    if check_compat:
+         test += [before_api]
+
+    test += ["--filter-errors", t["filter"] if "filter" in t else "NONE"]
+
+    if check_compat:
+        test += ["--show-noticed"]
 
     error_code = sp.call(test)
 
@@ -75,6 +86,6 @@ for t in tests:
         assert json_result['failure'] == True
         assert json_result['failures'][0]['rule'] == t['rule']
 
-    if t['expected'] == 'NO_CHANGE':
+    if t['expected'] == 'SUCCESS':
         assert len(json_result['api_changes']) == 0
         assert json_result['failure'] == False
