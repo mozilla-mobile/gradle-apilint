@@ -171,12 +171,14 @@ class Class():
 
         raw = raw.split()
         self.split = list(raw)
+        self.isEnum = False
         if "class" in raw:
             self.fullname = raw[raw.index("class")+1]
         elif "interface" in raw:
             self.fullname = raw[raw.index("interface")+1]
         elif "enum" in raw:
             self.fullname = raw[raw.index("enum")+1]
+            self.isEnum = True
         else:
             raise ValueError("Funky class type %s" % (self.raw))
 
@@ -563,6 +565,38 @@ def verify_threading_annotations(clazz):
             error(clazz, f, "GV3", "Method missing threading annotation. Needs "
                 "one of: @MainThread, @UiThread, @WorkerThread, @BinderThread, "
                 "@AnyThread.")
+
+def verify_nullability_annotations(clazz):
+    NULLABILITY_ANNOTATIONS = [
+        "android.support.annotation.NonNull",
+        "android.support.annotation.Nullable",
+    ]
+
+    PRIMITIVE_TYPES = ["boolean", "byte", "char", "short", "int", "long",
+                       "float", "double"]
+
+    if clazz.isEnum:
+        # Enum's have methods which are not under the developer control.
+        return
+
+    def has_nullability_annotation(subject):
+        # We don't need nullability annotations for primitive types or void
+        if subject.typ == "void" or subject.typ in PRIMITIVE_TYPES:
+            return True
+        for a in f.annotations:
+            if repr(a) in NULLABILITY_ANNOTATIONS:
+                return True
+        return False
+
+    methods = []
+    for f in clazz.methods:
+        if not has_nullability_annotation(f):
+            error(clazz, f, "GV4", "Missing return type nullability "
+                "annotation. Needs one of @Nullable, @NonNull.")
+        for a in f.args:
+            if not has_nullability_annotation(a):
+                error(clazz, f, "GV5", "Missing argument type nullability "
+                    "annotation. Needs one of @Nullable, @NonNull for argument " + repr(a))
 
 def verify_fields(clazz):
     """Verify that all exposed fields are final.
@@ -1467,6 +1501,7 @@ def examine_clazz(clazz):
     verify_clone(clazz)
     verify_final_fields_only_class(clazz)
     verify_threading_annotations(clazz)
+    verify_nullability_annotations(clazz)
 
 
 def examine_stream(stream):
