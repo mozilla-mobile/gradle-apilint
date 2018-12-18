@@ -46,6 +46,9 @@ public class ApiDoclet {
     static {
         ANNOTATIONS.add("java.lang.Deprecated");
 
+        ANNOTATIONS.add("android.support.annotation.NonNull");
+        ANNOTATIONS.add("android.support.annotation.Nullable");
+
         ANNOTATIONS.add("android.support.annotation.AnyThread");
         ANNOTATIONS.add("android.support.annotation.BinderThread");
         ANNOTATIONS.add("android.support.annotation.MainThread");
@@ -299,12 +302,16 @@ public class ApiDoclet {
         return type.qualifiedTypeName() + type.dimension();
     }
 
+    private String paramFragment(Parameter parameter) {
+        return annotationFragment(Stream.of(parameter.annotations()))
+                + typeFragment(parameter.type());
+    }
+
     private String paramsFragment(ExecutableMemberDoc executable) {
         String fragment = "(";
 
         fragment += Stream.of(executable.parameters())
-                .map(Parameter::type)
-                .map(this::typeFragment)
+                .map(this::paramFragment)
                 .collect(Collectors.joining(", "));
 
         if (executable.isVarArgs()) {
