@@ -159,25 +159,34 @@ public class ApiDoclet {
         }
     };
 
-    /** Collects all annotations in the class hierarchy. */
-    private List<AnnotationDesc> collectHierarchyAnnotations(ClassDoc classDoc,
-                                                             List<AnnotationDesc> annotations) {
-         annotations.addAll(Arrays.asList(classDoc.annotations()));
-
-         if (classDoc.superclass() != null) {
-             collectHierarchyAnnotations(classDoc.superclass(), annotations);
-         }
-
-         return annotations;
+    static class AnnotationWalker implements Walker<AnnotationDesc> {
+        @Override
+        public List<AnnotationDesc> visit(ClassDoc classDoc) {
+            return Arrays.asList(classDoc.annotations());
+        }
     }
 
-    private List<AnnotationDesc> collectHierarchyAnnotations(ClassDoc classDoc) {
-        return collectHierarchyAnnotations(classDoc, new ArrayList<AnnotationDesc>());
+    interface Walker<T> {
+        List<T> visit(ClassDoc classDoc);
+    }
+
+    private <T> List<T> collectHierarchy(ClassDoc classDoc, Walker<T> walker, List<T> collected) {
+        collected.addAll(walker.visit(classDoc));
+
+        if (classDoc.superclass() != null) {
+            collectHierarchy(classDoc.superclass(), walker, collected);
+        }
+
+        return collected;
+    }
+
+    private <T> List<T> collectHierarchy(ClassDoc classDoc, Walker<T> walker) {
+        return collectHierarchy(classDoc, walker, new ArrayList<T>());
     }
 
     private String toLine(ClassDoc classDoc) {
         String classLine = annotationFragment(
-                collectHierarchyAnnotations(classDoc).stream());
+                collectHierarchy(classDoc, new AnnotationWalker()).stream());
 
         classLine += classDoc.modifiers() + " ";
 
@@ -218,9 +227,11 @@ public class ApiDoclet {
     private void writeClass(ClassDoc classDoc, Writer writer) {
         writer.line(toLine(classDoc));
 
-        Stream.<Stream<ProgramElementDoc>> of(
+        Stream.<Stream<? extends ProgramElementDoc>> of(
                 sorted(classDoc.constructors()),
-                sorted(classDoc.methods()),
+                sorted(classDoc.methods())
+                        // Don't add @Override methods to the API
+                        .filter(m -> findSuperMethod(m) == null),
                 sorted(classDoc.enumConstants()),
                 sorted(classDoc.fields()))
             .flatMap(s -> s.map(this::toLine))
@@ -327,43 +338,56 @@ public class ApiDoclet {
         return typeParamsFragment(executable.typeParameters());
     }
 
-    private ExecutableMemberDoc findSuperMethod(ExecutableMemberDoc member) {
-        ClassDoc superClass = member.containingClass().superclass();
-        if (superClass == null) {
-            return null;
+    static class MethodWalker implements Walker<MethodDoc> {
+        public List<MethodDoc> visit(ClassDoc classDoc) {
+            return Arrays.asList(classDoc.methods());
+        }
+    }
+
+    static class InterfaceMethodWalker implements Walker<MethodDoc> {
+        public List<MethodDoc> visit(ClassDoc classDoc) {
+            return Stream.of(classDoc.interfaces())
+                    .flatMap(i -> Stream.of(i.methods()))
+                    .collect(Collectors.toList());
+        }
+    }
+
+    private String typesFragment(ExecutableMemberDoc executable) {
+        String fragment = "(";
+
+        fragment += Stream.of(executable.parameters())
+                .map(p -> p.type())
+                .map(this::typeFragment)
+                .collect(Collectors.joining(", "));
+
+        if (executable.isVarArgs()) {
+            fragment = fragment.replaceAll("\\[\\]$", "...");
         }
 
-        return Stream.of(superClass.methods())
+        return fragment + ")";
+    }
+
+    private ExecutableMemberDoc findSuperMethod(ExecutableMemberDoc member) {
+        List<MethodDoc> methods = collectHierarchy(member.containingClass(),
+                new InterfaceMethodWalker());
+
+        // TODO: resolve all super classes not just the immediate one
+        ClassDoc superClass = member.containingClass().superclass();
+        if (superClass != null) {
+            methods.addAll(collectHierarchy(superClass, new MethodWalker()));
+        }
+
+        return methods.stream()
                 .filter(m -> m.name().equals(member.name())
-                            && paramsFragment(m).equals(paramsFragment(member)))
+                            && typesFragment(m).equals(typesFragment(member)))
                 .findFirst()
                 .orElse(null);
-    }
-
-    private List<AnnotationDesc> collectMethodHierarchyAnnotations(
-            ProgramElementDoc member,
-            List<AnnotationDesc> annotations) {
-        annotations.addAll(Arrays.asList(member.annotations()));
-
-        if (member instanceof ExecutableMemberDoc) {
-            ProgramElementDoc superMethod = findSuperMethod((ExecutableMemberDoc) member);
-            if (superMethod != null) {
-                collectMethodHierarchyAnnotations(superMethod, annotations);
-            }
-        }
-
-        return annotations;
-    }
-
-    private List<AnnotationDesc> collectMethodHierarchyAnnotations(ProgramElementDoc member) {
-        return collectMethodHierarchyAnnotations(member, new ArrayList<AnnotationDesc>());
     }
 
     private String toLine(ProgramElementDoc member) {
         String line = tag(member) + " ";
 
-        line += annotationFragment(
-                collectMethodHierarchyAnnotations(member).stream());
+        line += annotationFragment(Stream.of(member.annotations()));
 
         if (!member.modifiers().equals("")) {
             line += member.modifiers() + " ";

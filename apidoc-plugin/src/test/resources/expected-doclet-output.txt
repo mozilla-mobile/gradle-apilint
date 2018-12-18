@@ -61,11 +61,9 @@ package org.mozilla.test {
   }
 
   @java.lang.Deprecated public static class TestClass.TestAnnotationChildDuplicateAnnotation extends org.mozilla.test.TestClass.TestAnnotationBase {
-    method @java.lang.Deprecated public void methodToOverride();
   }
 
   @java.lang.Deprecated public static class TestClass.TestAnnotationChildShouldHaveAnnotation extends org.mozilla.test.TestClass.TestAnnotationBase {
-    method @java.lang.Deprecated public void methodToOverride();
     method public void methodToOverride(int);
   }
 
@@ -86,7 +84,6 @@ package org.mozilla.test {
 
   public static class TestClass.TestInterfaceImpl implements org.mozilla.test.TestClass.TestInterface {
     ctor public TestInterfaceImpl();
-    method public void testInterfaceMethod();
   }
 
   public static interface TestClass.TestInterfaceTwo {
@@ -98,7 +95,6 @@ package org.mozilla.test {
 
   public static class TestClass.TestMultipleInterfaceImpl implements org.mozilla.test.TestClass.TestInterface org.mozilla.test.TestClass.TestInterfaceTwo {
     ctor public TestMultipleInterfaceImpl();
-    method public void testInterfaceMethod();
   }
 
   public static class TestClass.TestSort {
