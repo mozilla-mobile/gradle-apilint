@@ -13,9 +13,12 @@ package org.mozilla.test {
     method public final void testFinal();
     method public void testFinalArg(int);
     method public void testHiddenAnnotation();
+    method public final void testMethodAnnotation(@android.support.annotation.NonNull java.lang.String);
+    method public final void testMultipleMethodAnnotation(@android.support.annotation.NonNull java.lang.String, @android.support.annotation.NonNull java.lang.String);
     method public <T> void testParamNestedCompositeType(java.util.List<java.util.List<T>>);
     method public <T> java.util.List<T> testReturnCompositeType();
     method public <T> java.util.List<java.util.List<T>> testReturnNestedCompositeType();
+    method @android.support.annotation.NonNull public final java.lang.String testReturnTypeAnnotation();
     method public <T> T testReturnTypeUnbounded();
     method public <T extends java.lang.Runnable> T testReturnTypeWithBound();
     method public static void testStatic();
@@ -58,6 +61,7 @@ package org.mozilla.test {
 
   @java.lang.Deprecated public static class TestClass.TestAnnotationBase {
     method @java.lang.Deprecated public void methodToOverride();
+    method public void methodToOverrideWithArgAnnotation(@android.support.annotation.NonNull java.lang.String);
   }
 
   @java.lang.Deprecated public static class TestClass.TestAnnotationChildDuplicateAnnotation extends org.mozilla.test.TestClass.TestAnnotationBase {

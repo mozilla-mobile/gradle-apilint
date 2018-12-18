@@ -104,6 +104,14 @@ class Field():
         return self.raw
 
 
+class Argument():
+    def __init__(self, typ, annotations):
+        self.annotations = annotations
+        self.typ = typ
+
+    def __repr__(self):
+        return (" ".join("@" + repr(x) for x in self.annotations) + " " + self.typ).strip()
+
 class Method():
     def __init__(self, clazz, line, raw, blame):
         self.clazz = clazz
@@ -125,16 +133,23 @@ class Method():
         self.annotations = [
             Annotation(self, line, a, blame) for a in raw if a.startswith("@")]
 
-        raw = [x for x in raw if not x.startswith("@")]
+        raw_without_annotations = [x for x in raw if not x.startswith("@")]
 
-        self.typ = raw[0]
-        self.name = raw[1]
+        self.typ = raw_without_annotations[0]
+        self.name = raw_without_annotations[1]
         self.args = []
         self.throws = []
         target = self.args
-        for r in raw[2:]:
-            if r == "throws": target = self.throws
-            else: target.append(r)
+
+        annotations = []
+        for r in raw[raw.index(raw_without_annotations[1])+1:]:
+            if r.startswith("@"):
+                annotations.append(Annotation(self, line, r, blame))
+            elif r == "throws": target = self.throws
+            else:
+                target.append(Argument(r, annotations))
+                annotations = []
+
         self.ident = ident(self.raw)
 
     def __hash__(self):
@@ -494,7 +509,7 @@ def verify_parcelable(clazz):
             error(clazz, None, "FW8", "Parcelable classes must be final")
 
         for c in clazz.ctors:
-            if c.args == ["android.os.Parcel"]:
+            if len(c.args) == 1 and c.args[0].typ == "android.os.Parcel":
                 error(clazz, c, "FW3", "Parcelable inflation is exposed through CREATOR, not raw constructors")
 
 
@@ -743,7 +758,7 @@ def verify_layering(clazz):
         if ir and ir < cr:
             warn(clazz, m, "FW6", "Method return type violates package layering")
         for arg in m.args:
-            ir = rank(arg)
+            ir = rank(arg.typ)
             if ir and ir < cr:
                 warn(clazz, m, "FW6", "Method argument type violates package layering")
 
@@ -753,7 +768,7 @@ def verify_boolean(clazz):
     For example, hasFoo() and setHasFoo()."""
 
     def is_get(m): return len(m.args) == 0 and m.typ == "boolean"
-    def is_set(m): return len(m.args) == 1 and m.args[0] == "boolean"
+    def is_set(m): return len(m.args) == 1 and m.args[0].typ == "boolean"
 
     gets = [ m for m in clazz.methods if is_get(m) ]
     sets = [ m for m in clazz.methods if is_set(m) ]
@@ -798,7 +813,7 @@ def verify_collections(clazz):
         if m.typ in bad:
             error(clazz, m, "CL2", "Return type is concrete collection; must be higher-level interface")
         for arg in m.args:
-            if arg in bad:
+            if arg.typ in bad:
                 error(clazz, m, "CL2", "Argument is concrete collection; must be higher-level interface")
 
 
@@ -863,7 +878,7 @@ def verify_bitset(clazz):
         if m.typ == "java.util.BitSet":
             error(clazz, m, None, "Return type must not be heavy BitSet")
         for arg in m.args:
-            if arg == "java.util.BitSet":
+            if arg.typ == "java.util.BitSet":
                 error(clazz, m, None, "Argument type must not be heavy BitSet")
 
 
@@ -887,7 +902,7 @@ def verify_boxed(clazz):
 
     for c in clazz.ctors:
         for arg in c.args:
-            if arg in boxed:
+            if arg.typ in boxed:
                 error(clazz, c, "M11", "Must avoid boxed primitives")
 
     for f in clazz.fields:
@@ -898,7 +913,7 @@ def verify_boxed(clazz):
         if m.typ in boxed:
             error(clazz, m, "M11", "Must avoid boxed primitives")
         for arg in m.args:
-            if arg in boxed:
+            if arg.typ in boxed:
                 error(clazz, m, "M11", "Must avoid boxed primitives")
 
 
@@ -943,7 +958,7 @@ def verify_overload_args(clazz):
                 count[a] += 1
             return res
 
-        common_args = cluster(methods[0].args)
+        common_args = cluster(x.typ for x in methods[0].args)
         for m in methods:
             common_args = common_args & cluster(m.args)
 
@@ -952,7 +967,7 @@ def verify_overload_args(clazz):
         # Require that all common arguments are present at start of signature
         locked_sig = None
         for m in methods:
-            sig = m.args[0:len(common_args)]
+            sig = (x.typ for x in m.args[0:len(common_args)])
             if not common_args.issubset(cluster(sig)):
                 warn(clazz, m, "M2", "Expected common arguments [%s] at beginning of overloaded method" % (", ".join(common_args)))
             elif not locked_sig:
@@ -997,17 +1012,19 @@ def verify_callback_handlers(clazz):
         by_name[m.name].append(m)
 
         for a in m.args:
-            if a.endswith("Listener") or a.endswith("Callback") or a.endswith("Callbacks"):
+            if a.typ.endswith("Listener") or a.typ.endswith("Callback") or a.typ.endswith("Callbacks"):
                 found[m.name] = m
 
     for f in found.values():
         takes_handler = False
         takes_exec = False
         for m in by_name[f.name]:
-            if "android.os.Handler" in m.args:
-                takes_handler = True
-            if "java.util.concurrent.Executor" in m.args:
-                takes_exec = True
+            for a in m.args:
+                if "android.os.Handler" == a.typ:
+                    takes_handler = True
+            for a in m.args:
+                if "java.util.concurrent.Executor" == a.typ:
+                    takes_exec = True
         if not takes_exec:
             warn(clazz, f, "L1", "Registration methods should have overload that accepts delivery Executor")
 
@@ -1016,12 +1033,14 @@ def verify_context_first(clazz):
     """Verifies that methods accepting a Context keep it the first argument."""
     examine = clazz.ctors + clazz.methods
     for m in examine:
-        if len(m.args) > 1 and m.args[0] != "android.content.Context":
-            if "android.content.Context" in m.args[1:]:
-                error(clazz, m, "M3", "Context is distinct, so it must be the first argument")
-        if len(m.args) > 1 and m.args[0] != "android.content.ContentResolver":
-            if "android.content.ContentResolver" in m.args[1:]:
-                error(clazz, m, "M3", "ContentResolver is distinct, so it must be the first argument")
+        if len(m.args) > 1 and m.args[0].typ != "android.content.Context":
+            for a in m.args[1:]:
+                if "android.content.Context" == a.typ:
+                    error(clazz, m, "M3", "Context is distinct, so it must be the first argument")
+        if len(m.args) > 1 and m.args[0].typ != "android.content.ContentResolver":
+            for a in m.args[1:]:
+                if "android.content.ContentResolver" == a.typ:
+                    error(clazz, m, "M3", "ContentResolver is distinct, so it must be the first argument")
 
 
 def verify_listener_last(clazz):
@@ -1031,7 +1050,7 @@ def verify_listener_last(clazz):
         if "Listener" in m.name or "Callback" in m.name: continue
         found = False
         for a in m.args:
-            if a.endswith("Callback") or a.endswith("Callbacks") or a.endswith("Listener"):
+            if a.typ.endswith("Callback") or a.typ.endswith("Callbacks") or a.typ.endswith("Listener"):
                 found = True
             elif found:
                 warn(clazz, m, "M3", "Listeners should always be at end of argument list")
@@ -1075,10 +1094,11 @@ def verify_files(clazz):
     test.extend(clazz.methods)
 
     for m in test:
-        if "java.io.File" in m.args:
-            has_file.add(m)
-        if "java.io.FileDescriptor" in m.args or "android.os.ParcelFileDescriptor" in m.args or "java.io.InputStream" in m.args or "java.io.OutputStream" in m.args:
-            has_stream.add(m.name)
+        for a in m.args:
+            if "java.io.File" == a.typ:
+                has_file.add(m)
+            if "java.io.FileDescriptor" == a.typ or "android.os.ParcelFileDescriptor" == a.typ or "java.io.InputStream" == a.typ or "java.io.OutputStream" == a.typ:
+                has_stream.add(m.name)
 
     for m in has_file:
         if m.name not in has_stream:
@@ -1184,7 +1204,7 @@ def verify_units(clazz):
         typ = m.typ
         if typ == "void":
             if len(m.args) != 1: continue
-            typ = m.args[0]
+            typ = m.args[0].typ
 
         if m.name.endswith("Fraction") and typ != "float":
             error(clazz, m, None, "Fractions must use floats")
@@ -1286,7 +1306,7 @@ def verify_collections_over_arrays(clazz):
         if m.typ.endswith("[]") and m.typ not in safe:
             warn(clazz, m, None, "Method should return Collection<> (or subclass) instead of raw array")
         for arg in m.args:
-            if arg.endswith("[]") and arg not in safe:
+            if arg.typ.endswith("[]") and arg.typ not in safe:
                 warn(clazz, m, None, "Method argument should be Collection<> (or subclass) instead of raw array")
 
 
@@ -1301,8 +1321,9 @@ def verify_user_handle(clazz):
     for m in clazz.methods:
         if m.name.endswith("AsUser") or m.name.endswith("ForUser"): continue
         if re.match("on[A-Z]+", m.name): continue
-        if "android.os.UserHandle" in m.args:
-            warn(clazz, m, None, "Method taking UserHandle should be named 'doFooAsUser' or 'queryFooForUser'")
+        for a in m.args:
+            if "android.os.UserHandle" == a.typ:
+                warn(clazz, m, None, "Method taking UserHandle should be named 'doFooAsUser' or 'queryFooForUser'")
 
 
 def verify_params(clazz):
@@ -1367,7 +1388,8 @@ def verify_icu(clazz):
     for m in clazz.ctors + clazz.methods:
         types = []
         types.extend(m.typ)
-        types.extend(m.args)
+        for a in m.args:
+            types.append(a.typ)
         for arg in types:
             if arg in better:
                 warn(clazz, m, None, "Type %s should be replaced with richer ICU type %s" % (arg, better[arg]))

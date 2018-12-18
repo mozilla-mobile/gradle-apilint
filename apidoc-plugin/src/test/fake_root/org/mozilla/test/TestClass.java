@@ -5,6 +5,7 @@
 package org.mozilla.test;
 
 import java.util.List;
+import android.support.annotation.NonNull;
 
 /** Test class used in ApiDocletTest */
 public class TestClass {
@@ -28,6 +29,10 @@ public class TestClass {
     }
     public interface TestInterfaceTwo {}
 
+    public final void testMethodAnnotation(@NonNull String nonNullParam) {}
+    public final void testMultipleMethodAnnotation(@NonNull String nonNullParam1, @NonNull String nonNullParam2) {}
+    public final @NonNull String testReturnTypeAnnotation() {}
+
     public static class TestInterfaceImpl implements TestInterface {
         public void testInterfaceMethod() {}
     }
@@ -38,29 +43,35 @@ public class TestClass {
 
     @Deprecated
     public static class TestAnnotationBase {
-        private TestAnnotationBase();
+        private TestAnnotationBase() {}
 
         @Deprecated
-        public void methodToOverride();
+        public void methodToOverride() {}
+
+        public void methodToOverrideWithArgAnnotation(@NonNull String arg) {}
     }
 
     public static class TestAnnotationChildShouldHaveAnnotation extends TestAnnotationBase {
-        private TestAnnotationChildShouldHaveAnnotation();
+        private TestAnnotationChildShouldHaveAnnotation() {}
 
         @Override
-        public void methodToOverride();
+        public void methodToOverride() {}
+
+        // NOTE: Missing @NonNull but still @Override
+        @Override
+        public void methodToOverrideWithArgAnnotation(String arg) {}
 
         // NOTE: Not @Override
-        public void methodToOverride(int overload);
+        public void methodToOverride(int overload) {}
     }
 
     @Deprecated
     public static class TestAnnotationChildDuplicateAnnotation extends TestAnnotationBase {
-        private TestAnnotationChildDuplicateAnnotation();
+        private TestAnnotationChildDuplicateAnnotation() {}
 
         @Override
         @Deprecated
-        public void methodToOverride();
+        public void methodToOverride() {}
     }
 
     public TestClass() {}
