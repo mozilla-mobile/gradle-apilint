@@ -127,3 +127,11 @@ optional. See also [Changelog](#changelog).
 <code><b>lintFilters</b></code> List of lints that fail the build, by default
 all lints can fail the build. Filters will match any error code that starts
 with the string specified, e.g. `GV` will match `GV1`, `GV2`, ...
+
+## License
+
+```
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at http://mozilla.org/MPL/2.0/
+```
