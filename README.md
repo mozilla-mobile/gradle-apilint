@@ -104,6 +104,7 @@ apiLint {
     apiOutputFileName = 'api.txt'
     currentApiRelativeFilePath = 'api.txt'
     jsonResultFileName = 'apilint-result.json'
+    skipClassesRegex = []
     changelogFileName = null
     lintFilters = null
 }
@@ -120,6 +121,11 @@ the source folder.
 
 <code><b>jsonResultFileName</b></code> Relative path to the JSON file name that
 contains the result of apilint.
+
+<code><b>skipClassesRegex</b></code> Ignore classes which full path matches
+any regex contained in this array. E.g. `BuildConfig$` will match any class
+named `BuildConfig`, `^org.mozilla` will match any class in the package
+`org.mozilla`.
 
 <code><b>changelogFileName</b></code> Relative path to the changelog file,
 optional. See also [Changelog](#changelog).

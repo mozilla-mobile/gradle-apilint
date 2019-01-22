@@ -7,6 +7,8 @@ class ApiLintPluginExtension {
     String apiOutputFileName = 'api.txt'
     String currentApiRelativeFilePath = 'api.txt'
     String jsonResultFileName = 'apilint-result.json'
+    List<String> skipClassesRegex = []
+
     String changelogFileName
     List<String> lintFilters
 }

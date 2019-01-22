@@ -41,6 +41,9 @@ public class TestClass {
     }
     public static class TestExtends extends TestInterfaceImpl {}
 
+    public static class TestSkippedClass {}
+    public static class TestSkippedClass2 {}
+
     @Deprecated
     public static class TestAnnotationBase {
         private TestAnnotationBase() {}
