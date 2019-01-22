@@ -35,10 +35,11 @@ class ApiLintPlugin implements Plugin<Project> {
                 }
 
                 source = variant.getJavaCompile().source
-                exclude '**/R.java', '**/BuildConfig.java'
+                exclude '**/R.java'
 
                 outputFile = apiFile
                 packageFilter = extension.packageFilter
+                skipClassesRegex = extension.skipClassesRegex
                 destinationDir = new File(destinationDir, variant.baseName)
                 sourcePath = variant.sourceSets.collect({ it.javaDirectories }).flatten()
             }

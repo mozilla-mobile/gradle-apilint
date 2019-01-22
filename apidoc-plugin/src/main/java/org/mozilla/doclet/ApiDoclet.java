@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -41,6 +42,7 @@ public class ApiDoclet {
     private static final String OPTION_DOCTITLE = "-doctitle";
     private static final String OPTION_WINDOWTITLE = "-windowtitle";
     private static final String OPTION_DIRECTORY = "-d";
+    private static final String OPTION_SKIP_CLASS_REGEX = "-skip-class-regex";
 
     private static final Set<String> ANNOTATIONS = new HashSet<>();
     static {
@@ -59,33 +61,39 @@ public class ApiDoclet {
     /** Doclet API: check that the options provided are valid */
     public static boolean validOptions(String options[][],
                                        DocErrorReporter reporter) {
-        if (!outputFileName(options).isPresent()) {
+        if (!parseOptions(options).isPresent()) {
             reporter.printError("Usage: javadoc -output api.txt ...");
         }
 
-        return outputFileName(options).isPresent();
+        return parseOptions(options).isPresent();
     }
 
     /** Doclet API: main entry point */
     public static boolean start(RootDoc root) {
         // The right options will always be present as they're checked in
         // `validOptions`
-        final String fileName = outputFileName(root.options()).get();
+        final Options options = parseOptions(root.options()).get();
 
         try {
             final Writer writer = new WriterImpl(
-                        new BufferedWriter(new FileWriter(fileName)));
+                        new BufferedWriter(new FileWriter(options.outputFileName)));
 
-            return writeApi(root, writer);
+            return writeApi(root, writer, options);
         } catch (IOException e) {
             System.err.println("Error: " + e.getMessage());
             return false;
         }
     }
 
+    private final List<Pattern> mSkipClasses;
+
+    private ApiDoclet(List<Pattern> skipClasses) {
+        mSkipClasses = skipClasses;
+    }
+
     // public for testing
-    public static boolean writeApi(RootDoc root, Writer writer) {
-        final ApiDoclet instance = new ApiDoclet();
+    public static boolean writeApi(RootDoc root, Writer writer, Options options) {
+        final ApiDoclet instance = new ApiDoclet(options.skipClasses);
 
         sorted(root.specifiedPackages())
                 .forEach(p -> instance.writePackage(p, writer));
@@ -102,6 +110,7 @@ public class ApiDoclet {
         case OPTION_DIRECTORY:
         case OPTION_DOCTITLE:
         case OPTION_WINDOWTITLE:
+        case OPTION_SKIP_CLASS_REGEX:
             return 2;
         default:
             return 0;
@@ -113,12 +122,37 @@ public class ApiDoclet {
         return LanguageVersion.JAVA_1_5;
     }
 
-    private static Optional<String> outputFileName(String options[][]) {
-        return Stream.of(options)
-            .filter(option -> OPTION_OUTPUT.equals(option[0]))
-            // option[1] is the value of the option
-            .map(option -> option[1])
-            .findFirst();
+    private static class Options {
+        final String outputFileName;
+        final List<Pattern> skipClasses;
+
+        public Options(String outputFileName, List<String> skipClassesRegex) {
+            this.outputFileName = outputFileName;
+            this.skipClasses = skipClassesRegex.stream()
+                    .map(Pattern::compile)
+                    .collect(Collectors.toList());
+        }
+    }
+
+    private static Optional<Options> parseOptions(String options[][]) {
+        Optional<String> outputFileName = Optional.empty();
+        List<String> skipClasses = new ArrayList<>();
+
+        for (int i = 0; i < options.length; i++) {
+            String[] option = options[i];
+            switch (option[0]) {
+                case OPTION_OUTPUT:
+                    outputFileName = Optional.of(option[1]);
+                    break;
+                case OPTION_SKIP_CLASS_REGEX:
+                    skipClasses.add(option[1]);
+                    break;
+                default:
+                    // ignore
+            }
+        }
+
+        return outputFileName.map(output -> new Options(output, skipClasses));
     }
 
     private void writePackage(PackageDoc packageDoc, Writer writer) {
@@ -228,6 +262,11 @@ public class ApiDoclet {
     }
 
     private void writeClass(ClassDoc classDoc, Writer writer) {
+        if (mSkipClasses.stream()
+                .anyMatch(sk -> sk.matcher(classDoc.qualifiedName()).find())) {
+            return;
+        }
+
         writer.line(toLine(classDoc));
 
         Stream.<Stream<? extends ProgramElementDoc>> of(

@@ -18,8 +18,11 @@ class ApiCompatLintTask extends Javadoc {
     @Input
     String packageFilter
 
+    @Input
+    List<String> skipClasses
+
     @InputFiles
-    ArrayList<File> sourcePath
+    List<File> sourcePath
 
     private final static String CONFIG_NAME = 'apidoc-plugin'
 
@@ -45,6 +48,10 @@ class ApiCompatLintTask extends Javadoc {
         options.addStringOption('output', outputFile.absolutePath)
         options.addStringOption('subpackages', packageFilter)
         options.addStringOption('sourcepath', sourcePath.join(':'))
+
+        skipClassesRegex.each{ className ->
+                options.addStringOption('skip-class-regex', className)
+        }
 
         super.generate()
     }
