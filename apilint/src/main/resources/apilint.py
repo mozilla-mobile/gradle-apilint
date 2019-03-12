@@ -598,6 +598,15 @@ def verify_nullability_annotations(clazz):
                 error(clazz, f, "GV5", "Missing argument type nullability "
                     "annotation. Needs one of @Nullable, @NonNull for argument " + repr(a))
 
+def verify_default_impl(clazz):
+    if "interface" not in clazz.split:
+        return
+
+    for f in clazz.methods:
+        if "default" not in f.split:
+            error(clazz, f, "GV6", "All interface methods should have a default "
+                "implementation for backwards compatibility")
+
 def verify_fields(clazz):
     """Verify that all exposed fields are final.
     Exposed fields must follow myName style.
@@ -1502,6 +1511,7 @@ def examine_clazz(clazz):
     verify_final_fields_only_class(clazz)
     verify_threading_annotations(clazz)
     verify_nullability_annotations(clazz)
+    verify_default_impl(clazz)
 
 
 def examine_stream(stream):
