@@ -69,6 +69,9 @@
     "test": "test-annotation-add-class",
     "expected": "API_CHANGE"
   },{
+    "test": "test-interface-default-pass",
+    "expected": "API_CHANGE"
+  },{
     "test": "test-fields-only-class",
     "expected": "API_ERROR",
     "check_compat": false,
@@ -92,6 +95,12 @@
     "check_compat": false,
     "filter": "GV",
     "rule": "GV5"
+  },{
+    "test": "test-interface-default",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV6"
   },{
     "test": "test-nullable-method-with-annotations",
     "expected": "SUCCESS",

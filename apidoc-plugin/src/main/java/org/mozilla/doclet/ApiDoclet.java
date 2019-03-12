@@ -435,6 +435,10 @@ public class ApiDoclet {
 
         line += annotationFragment(Stream.of(member.annotations()));
 
+        if (member instanceof MethodDoc) {
+            line += ((MethodDoc) member).isDefault() ? "default " : "";
+        }
+
         if (!member.modifiers().equals("")) {
             line += member.modifiers() + " ";
         }

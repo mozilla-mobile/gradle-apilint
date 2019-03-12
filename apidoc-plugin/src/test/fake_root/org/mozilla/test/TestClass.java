@@ -27,6 +27,9 @@ public class TestClass {
     public interface TestInterface {
         void testInterfaceMethod();
     }
+    public interface TestDefaultInterface {
+        default void testInterfaceMethod() {}
+    }
     public interface TestInterfaceTwo {}
 
     public final void testMethodAnnotation(@NonNull String nonNullParam) {}
