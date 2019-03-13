@@ -602,6 +602,11 @@ def verify_default_impl(clazz):
     if "interface" not in clazz.split:
         return
 
+    if len(clazz.methods) == 1:
+        # Interfaces with just one method are "functional interfaces" and need
+        # to be abstract
+        return
+
     for f in clazz.methods:
         if "default" not in f.split:
             error(clazz, f, "GV6", "All interface methods should have a default "
