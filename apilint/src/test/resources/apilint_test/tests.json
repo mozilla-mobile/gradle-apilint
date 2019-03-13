@@ -72,6 +72,9 @@
     "test": "test-interface-default-pass",
     "expected": "API_CHANGE"
   },{
+    "test": "test-interface-default-functional",
+    "expected": "API_CHANGE"
+  },{
     "test": "test-fields-only-class",
     "expected": "API_ERROR",
     "check_compat": false,
