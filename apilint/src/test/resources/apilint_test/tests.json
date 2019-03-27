@@ -93,6 +93,12 @@
     "filter": "GV",
     "rule": "GV4"
   },{
+    "test": "test-nullable-field-missing-nullable",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV4"
+  },{
     "test": "test-nullable-void-method-missing-nullable-arg",
     "expected": "API_ERROR",
     "check_compat": false,
@@ -116,6 +122,16 @@
     "filter": "GV"
   },{
     "test": "test-nullable-void-method-no-args",
+    "expected": "SUCCESS",
+    "check_compat": false,
+    "filter": "GV"
+  },{
+    "test": "test-nullable-field-pass",
+    "expected": "SUCCESS",
+    "check_compat": false,
+    "filter": "GV"
+  },{
+    "test": "test-nullable-const-field",
     "expected": "SUCCESS",
     "check_compat": false,
     "filter": "GV"

@@ -89,6 +89,11 @@ class Field():
         for r in ["field", "enum_constant", "volatile", "transient", "public", "protected", "static", "final", "deprecated"]:
             while r in raw: raw.remove(r)
 
+        self.annotations = [
+            Annotation(self, line, a, blame) for a in raw if a.startswith("@")]
+
+        raw = [x for x in raw if not x.startswith("@")]
+
         self.typ = raw[0]
         self.name = raw[1].strip(";")
         if len(raw) >= 4 and raw[2] == "=":
@@ -133,22 +138,19 @@ class Method():
         self.annotations = [
             Annotation(self, line, a, blame) for a in raw if a.startswith("@")]
 
-        raw_without_annotations = [x for x in raw if not x.startswith("@")]
+        raw = [x for x in raw if not x.startswith("@")]
 
-        self.typ = raw_without_annotations[0]
-        self.name = raw_without_annotations[1]
+        self.typ = raw[0]
+        self.name = raw[1]
         self.args = []
         self.throws = []
         target = self.args
 
         annotations = []
-        for r in raw[raw.index(raw_without_annotations[1])+1:]:
-            if r.startswith("@"):
-                annotations.append(Annotation(self, line, r, blame))
-            elif r == "throws": target = self.throws
+        for r in raw[raw.index(raw[1])+1:]:
+            if r == "throws": target = self.throws
             else:
                 target.append(Argument(r, annotations))
-                annotations = []
 
         self.ident = ident(self.raw)
 
@@ -555,7 +557,6 @@ def verify_threading_annotations(clazz):
             return []
 
     # Otherwise check all methods
-    methods = []
     for f in clazz.methods:
         has_annotation = False
         for a in f.annotations:
@@ -597,6 +598,14 @@ def verify_nullability_annotations(clazz):
             if not has_nullability_annotation(a):
                 error(clazz, f, "GV5", "Missing argument type nullability "
                     "annotation. Needs one of @Nullable, @NonNull for argument " + repr(a))
+    for f in clazz.fields:
+        if "final" in f.split and "static" in f.split:
+            # We don't need nullability annotation if the value can't change
+            continue
+        if not has_nullability_annotation(f):
+            error(clazz, f, "GV4", "Missing field type nullability "
+                "annotation. Needs one of @Nullable, @NonNull.")
+
 
 def verify_default_impl(clazz):
     if "interface" not in clazz.split:
