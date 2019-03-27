@@ -40,8 +40,6 @@ for t in tests:
                  before_api, "--label", "before.txt",
                  after_api, "--label", "after.txt"])
 
-    print("")
-
     json_file = "{}/{}-result.json".format(args.build_dir, t["test"])
     test = ["python", "src/main/resources/apilint.py",
             "--result-json", json_file,
@@ -52,8 +50,14 @@ for t in tests:
 
     test += ["--filter-errors", t["filter"] if "filter" in t else "NONE"]
 
+    if "allowed_packages" in t:
+        test += ["--allowed-packages"] + t["allowed_packages"]
+
     if check_compat:
         test += ["--show-noticed"]
+
+    print("Command: {}".format(" ".join(test)))
+    print("")
 
     error_code = sp.call(test)
 

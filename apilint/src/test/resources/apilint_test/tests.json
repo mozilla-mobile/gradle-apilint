@@ -111,6 +111,76 @@
     "filter": "GV",
     "rule": "GV6"
   },{
+    "test": "test-package-unallowed-ctor",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-package-unallowed-ctor-annotation",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-package-unallowed-method-return-type",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-package-unallowed-method-type-generic",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV7",
+    "rule": "GV7",
+    "allowed_packages": ["test", "java"]
+  },{
+    "test": "test-package-unallowed-method-return-type-annotation",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-package-unallowed-method-argument",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-package-unallowed-method-argument-annotation",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-package-unallowed-field",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-package-unallowed-field-annotation",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-package-unallowed-extends",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
     "test": "test-nullable-method-with-annotations",
     "expected": "SUCCESS",
     "check_compat": false,
@@ -119,7 +189,8 @@
     "test": "test-nullable-void-method-int-args",
     "expected": "SUCCESS",
     "check_compat": false,
-    "filter": "GV"
+    "filter": "GV",
+    "allowed_packages": ["test", "android"]
   },{
     "test": "test-nullable-void-method-no-args",
     "expected": "SUCCESS",
@@ -129,7 +200,14 @@
     "test": "test-nullable-field-pass",
     "expected": "SUCCESS",
     "check_compat": false,
-    "filter": "GV"
+    "filter": "GV",
+    "allowed_packages": ["java", "android", "test"]
+  },{
+    "test": "test-annotation-arguments",
+    "expected": "SUCCESS",
+    "check_compat": false,
+    "filter": "GV",
+    "allowed_packages": ["java", "android", "test", "org.mozilla.geckoview"]
   },{
     "test": "test-nullable-const-field",
     "expected": "SUCCESS",

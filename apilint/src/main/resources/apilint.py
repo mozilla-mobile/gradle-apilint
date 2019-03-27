@@ -34,6 +34,9 @@ BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 ALLOW_GOOGLE = False
 USE_COLOR = True
 
+PRIMITIVE_TYPES = ["boolean", "byte", "char", "short", "int", "long", "float",
+                   "double"]
+
 def format(fg=None, bg=None, bright=False, bold=False, dim=False, reset=False):
     # manually derived from http://en.wikipedia.org/wiki/ANSI_escape_code#Codes
     if not USE_COLOR: return ""
@@ -63,12 +66,14 @@ def ident(raw):
 
 
 class Annotation():
-    def __init__(self, clazz, line, raw, blame):
+    def __init__(self, clazz, source, line, raw, blame):
         self.clazz = clazz
         self.line = line
         self.raw = raw[1:]
+        self.typ = Type(clazz, self, raw[1:], line, blame)
         self.blame = blame
         self.ident = self.raw
+        self.source = source
 
     def __hash__(self):
         return hash(self.raw)
@@ -82,19 +87,20 @@ class Field():
         self.line = line
         self.raw = raw.strip(" {;")
         self.blame = blame
+        self.source = None
 
-        raw = raw.split()
+        raw = collect_chunks(raw, "[\s;]")
         self.split = list(raw)
 
         for r in ["field", "enum_constant", "volatile", "transient", "public", "protected", "static", "final", "deprecated"]:
             while r in raw: raw.remove(r)
 
         self.annotations = [
-            Annotation(self, line, a, blame) for a in raw if a.startswith("@")]
+            Annotation(clazz, self, line, a, blame) for a in raw if a.startswith("@")]
 
         raw = [x for x in raw if not x.startswith("@")]
 
-        self.typ = raw[0]
+        self.typ = Type(clazz, self, raw[0], line, blame)
         self.name = raw[1].strip(";")
         if len(raw) >= 4 and raw[2] == "=":
             self.value = raw[3].strip(';"')
@@ -110,47 +116,96 @@ class Field():
 
 
 class Argument():
-    def __init__(self, typ, annotations):
-        self.annotations = annotations
-        self.typ = typ
+    def __init__(self, clazz, source, raw, line, blame):
+        raw = collect_chunks(raw, "\s")
+        self.annotations = [
+            Annotation(clazz, self, line, a, blame) for a in raw if a.startswith("@")]
+        raw = [x for x in raw if not x.startswith("@")]
+
+        self.typ = Type(clazz, source, " ".join(raw), line, blame)
+        self.line = line
+        self.blame = blame
+        self.clazz = clazz
+        self.source = source
 
     def __repr__(self):
-        return (" ".join("@" + repr(x) for x in self.annotations) + " " + self.typ).strip()
+        return (" ".join("@" + repr(x) for x in self.annotations) + " " + repr(self.typ)).strip()
+
+def collect_chunks(line, separator, separator_len=1):
+    chunks = []
+    unparsed = line.strip()
+    while unparsed != "":
+        chunk, unparsed = find_next_chunk(unparsed, separator, separator_len)
+        unparsed = unparsed.strip()
+        chunks.append(chunk.strip())
+    return chunks
+
+# Finds the next chunk in line, considers everything between
+# '<' and '>' to be part of the same chunk, so e.g.
+# "TestClass<A extends B>" is considered one chunk
+def find_next_chunk(unparsed, separator, separator_len=1):
+    balance = 0
+    for i in range(1, len(unparsed) + 1):
+        if unparsed[i-1] == '<':
+            balance += 1
+        elif unparsed[i-1] == '>':
+            balance -= 1
+        elif (i >= separator_len and
+                re.match(separator, unparsed[i-separator_len:i]) and
+                balance == 0):
+            return (unparsed[0:i-separator_len], unparsed[i:].strip())
+    # only one chunk
+    return (unparsed, "")
 
 class Method():
+    def parse_line(self, line):
+        line = line.strip()
+        arg_begin = line.find('(')
+        arg_end = line.find(')')
+
+        raw = collect_chunks(line[:arg_begin], "\s")
+        arguments = collect_chunks(line[arg_begin+1:arg_end], ",")
+        return (raw, arguments)
+
     def __init__(self, clazz, line, raw, blame):
         self.clazz = clazz
         self.line = line
         self.raw = raw.strip(" {;")
         self.blame = blame
+        self.source = None
 
-        # drop generics for now
-        raw = re.sub("<.+?>", "", raw)
-
-        raw = re.split("[\s(),;]+", raw)
+        (raw, arguments) = self.parse_line(raw)
         for r in ["", ";"]:
             while r in raw: raw.remove(r)
         self.split = list(raw)
 
-        for r in ["method", "public", "protected", "static", "final", "synchronized", "deprecated", "abstract", "default"]:
+        if raw[0] == "method":
+            raw = raw[1:]
+
+        for r in ["public", "protected", "static", "final", "synchronized", "deprecated", "abstract", "default"]:
             while r in raw: raw.remove(r)
 
         self.annotations = [
-            Annotation(self, line, a, blame) for a in raw if a.startswith("@")]
+            Annotation(clazz, self, line, a, blame) for a in raw if a.startswith("@")]
 
         raw = [x for x in raw if not x.startswith("@")]
 
-        self.typ = raw[0]
+        if raw[0].startswith("<"):
+            self.generics = Type(clazz, self, raw[0], line, blame).generics
+            raw = raw[1:]
+        else:
+            self.generics = []
+
+        typ_name = raw[0] if raw[0] != "ctor" else clazz.fullname
+        self.typ = Type(clazz, self, typ_name, line, blame)
+
         self.name = raw[1]
         self.args = []
         self.throws = []
-        target = self.args
 
-        annotations = []
-        for r in raw[raw.index(raw[1])+1:]:
-            if r == "throws": target = self.throws
-            else:
-                target.append(Argument(r, annotations))
+        #TODO: throws
+        for r in arguments:
+            self.args.append(Argument(clazz, self, r, line, blame))
 
         self.ident = ident(self.raw)
 
@@ -159,6 +214,38 @@ class Method():
 
     def __repr__(self):
         return self.raw
+
+class Type():
+    def __init__(self, clazz, source, raw, line, blame):
+        self.line = line
+        self.blame = blame
+        self.source = source
+
+        raw = collect_chunks(raw, "extends", len("extends"))
+        if len(raw) > 1:
+            extends = collect_chunks(raw[1], "&")
+            self.extends = [Type(clazz, self, e, line, blame) for e in extends]
+        else:
+            self.extends = []
+
+        raw = raw[0]
+        if "<" in raw:
+            generics_string = raw[raw.find("<")+1:raw.rfind(">")]
+            self.generics = [Type(clazz, self, x, line, blame)
+                for x in collect_chunks(generics_string, ",")]
+            raw = raw[:raw.find("<")]
+        else:
+            self.generics = []
+
+        if raw.endswith("[]"):
+            self.name = raw[:-2]
+            self.is_array = True
+        else:
+            self.name = raw
+            self.is_array = False
+
+    def __repr__(self):
+        return self.name
 
 
 class Class():
@@ -170,8 +257,9 @@ class Class():
         self.ctors = []
         self.fields = []
         self.methods = []
+        self.source = None
 
-        raw = raw.split()
+        raw = collect_chunks(raw, "\s")
         self.split = list(raw)
         self.isEnum = False
         if "class" in raw:
@@ -185,14 +273,20 @@ class Class():
             raise ValueError("Funky class type %s" % (self.raw))
 
         if "extends" in raw:
-            self.extends = raw[raw.index("extends")+1]
-            self.extends_path = self.extends.split(".")
+            self.extends = Type(self, None, raw[raw.index("extends")+1], line, blame)
+            self.extends_path = collect_chunks(self.extends.name, ".")
         else:
             self.extends = None
             self.extends_path = []
 
         self.annotations = [
-            Annotation(self, line, a, blame) for a in raw if a.startswith("@")]
+            Annotation(self, None, line, a, blame) for a in raw if a.startswith("@")]
+
+        if "<" in self.fullname:
+            self.generics = Type(self, None, self.fullname, line, blame).generics
+            self.fullname = re.sub("<.+?>", "", self.fullname)
+        else:
+            self.generics = []
 
         self.fullname = self.pkg.name + "." + self.fullname
         self.fullname_path = self.fullname.split(".")
@@ -211,6 +305,7 @@ class Package():
         self.line = line
         self.raw = raw.strip(" {;")
         self.blame = blame
+        self.source = None
 
         raw = raw.split()
         self.name = raw[raw.index("package")+1]
@@ -282,9 +377,11 @@ class Failure():
         self.line = clazz.line
         blame = clazz.blame
         if detail is not None:
-            dump += "\n    in " + repr(detail)
             self.line = detail.line
             blame = detail.blame
+            while detail is not None:
+                dump += "\n    in " + repr(detail)
+                detail = detail.source
         dump += "\n    in " + repr(clazz)
         dump += "\n    in " + repr(clazz.pkg)
         dump += "\n    at line " + repr(self.line)
@@ -438,7 +535,7 @@ def verify_actions(clazz):
         if f.name == "SERVICE_INTERFACE" or f.name == "PROVIDER_INTERFACE": continue
         if "INTERACTION" in f.name: continue
 
-        if "static" in f.split and "final" in f.split and f.typ == "java.lang.String":
+        if "static" in f.split and "final" in f.split and f.typ.name == "java.lang.String":
             if "_ACTION" in f.name or "ACTION_" in f.name or ".action." in f.value.lower():
                 if not f.name.startswith("ACTION_"):
                     error(clazz, f, "C3", "Intent action constant name must be ACTION_FOO")
@@ -470,7 +567,7 @@ def verify_extras(clazz):
         if f.value is None: continue
         if f.name.startswith("ACTION_"): continue
 
-        if "static" in f.split and "final" in f.split and f.typ == "java.lang.String":
+        if "static" in f.split and "final" in f.split and f.typ.name == "java.lang.String":
             if "_EXTRA" in f.name or "EXTRA_" in f.name or ".extra" in f.value.lower():
                 if not f.name.startswith("EXTRA_"):
                     error(clazz, f, "C3", "Intent extra must be EXTRA_FOO")
@@ -513,7 +610,7 @@ def verify_parcelable(clazz):
             error(clazz, None, "FW8", "Parcelable classes must be final")
 
         for c in clazz.ctors:
-            if len(c.args) == 1 and c.args[0].typ == "android.os.Parcel":
+            if len(c.args) == 1 and c.args[0].typ.name == "android.os.Parcel":
                 error(clazz, c, "FW3", "Parcelable inflation is exposed through CREATOR, not raw constructors")
 
 
@@ -573,18 +670,16 @@ def verify_nullability_annotations(clazz):
         "android.support.annotation.Nullable",
     ]
 
-    PRIMITIVE_TYPES = ["boolean", "byte", "char", "short", "int", "long",
-                       "float", "double"]
-
     if clazz.isEnum:
         # Enum's have methods which are not under the developer control.
         return
 
     def has_nullability_annotation(subject):
         # We don't need nullability annotations for primitive types or void
-        if subject.typ == "void" or subject.typ in PRIMITIVE_TYPES:
+        if not subject.typ.is_array and (subject.typ.name == "void" or
+                subject.typ.name in PRIMITIVE_TYPES):
             return True
-        for a in f.annotations:
+        for a in subject.annotations:
             if repr(a) in NULLABILITY_ANNOTATIONS:
                 return True
         return False
@@ -596,8 +691,8 @@ def verify_nullability_annotations(clazz):
                 "annotation. Needs one of @Nullable, @NonNull.")
         for a in f.args:
             if not has_nullability_annotation(a):
-                error(clazz, f, "GV5", "Missing argument type nullability "
-                    "annotation. Needs one of @Nullable, @NonNull for argument " + repr(a))
+                error(clazz, a, "GV5", "Missing argument type nullability "
+                    "annotation. Needs one of @Nullable, @NonNull.")
     for f in clazz.fields:
         if "final" in f.split and "static" in f.split:
             # We don't need nullability annotation if the value can't change
@@ -680,7 +775,7 @@ def verify_intent_builder(clazz):
     if clazz.name == "Intent": return
 
     for m in clazz.methods:
-        if m.typ == "android.content.Intent":
+        if m.typ.name == "android.content.Intent":
             if m.name.startswith("create") and m.name.endswith("Intent"):
                 pass
             else:
@@ -757,7 +852,7 @@ def verify_builder(clazz):
             warn(clazz, m, None, "Builder methods names should use setFoo() style")
 
         if m.name.startswith("set"):
-            if not m.typ.endswith(clazz.fullname):
+            if not m.typ.name.endswith(clazz.fullname):
                 warn(clazz, m, "M4", "Methods must return the builder object")
 
     if not has_build:
@@ -824,8 +919,8 @@ def verify_boolean(clazz):
     """Verifies that boolean accessors are named correctly.
     For example, hasFoo() and setHasFoo()."""
 
-    def is_get(m): return len(m.args) == 0 and m.typ == "boolean"
-    def is_set(m): return len(m.args) == 1 and m.args[0].typ == "boolean"
+    def is_get(m): return len(m.args) == 0 and m.typ.name == "boolean"
+    def is_set(m): return len(m.args) == 1 and m.args[0].typ.name == "boolean"
 
     gets = [ m for m in clazz.methods if is_get(m) ]
     sets = [ m for m in clazz.methods if is_set(m) ]
@@ -928,14 +1023,14 @@ def verify_bitset(clazz):
     """Verifies that we avoid using heavy BitSet."""
 
     for f in clazz.fields:
-        if f.typ == "java.util.BitSet":
+        if f.typ.name == "java.util.BitSet":
             error(clazz, f, None, "Field type must not be heavy BitSet")
 
     for m in clazz.methods:
-        if m.typ == "java.util.BitSet":
+        if m.typ.name == "java.util.BitSet":
             error(clazz, m, None, "Return type must not be heavy BitSet")
         for arg in m.args:
-            if arg.typ == "java.util.BitSet":
+            if arg.typ.name == "java.util.BitSet":
                 error(clazz, m, None, "Argument type must not be heavy BitSet")
 
 
@@ -948,7 +1043,7 @@ def verify_manager(clazz):
         error(clazz, c, None, "Managers must always be obtained from Context; no direct constructors")
 
     for m in clazz.methods:
-        if m.typ == clazz.fullname:
+        if m.typ.name == clazz.fullname:
             error(clazz, m, None, "Managers must always be obtained from Context")
 
 
@@ -1069,7 +1164,7 @@ def verify_callback_handlers(clazz):
         by_name[m.name].append(m)
 
         for a in m.args:
-            if a.typ.endswith("Listener") or a.typ.endswith("Callback") or a.typ.endswith("Callbacks"):
+            if a.typ.name.endswith("Listener") or a.typ.name.endswith("Callback") or a.typ.name.endswith("Callbacks"):
                 found[m.name] = m
 
     for f in found.values():
@@ -1107,7 +1202,7 @@ def verify_listener_last(clazz):
         if "Listener" in m.name or "Callback" in m.name: continue
         found = False
         for a in m.args:
-            if a.typ.endswith("Callback") or a.typ.endswith("Callbacks") or a.typ.endswith("Listener"):
+            if a.typ.name.endswith("Callback") or a.typ.name.endswith("Callbacks") or a.typ.name.endswith("Listener"):
                 found = True
             elif found:
                 warn(clazz, m, "M3", "Listeners should always be at end of argument list")
@@ -1168,7 +1263,7 @@ def verify_manager_list(clazz):
     if not clazz.name.endswith("Manager"): return
 
     for m in clazz.methods:
-        if m.typ.startswith("android.") and m.typ.endswith("[]"):
+        if m.typ.name.startswith("android.") and m.typ.is_array:
             warn(clazz, m, None, "Methods should return List<? extends Parcelable> instead of Parcelable[] to support ParceledListSlice under the hood")
 
 
@@ -1227,9 +1322,9 @@ def verify_runtime_exceptions(clazz):
 def verify_error(clazz):
     """Verifies that we always use Exception instead of Error."""
     if not clazz.extends: return
-    if clazz.extends.endswith("Error"):
+    if clazz.extends.name.endswith("Error"):
         error(clazz, None, None, "Trouble must be reported through an Exception, not Error")
-    if clazz.extends.endswith("Exception") and not clazz.name.endswith("Exception"):
+    if clazz.extends.name.endswith("Exception") and not clazz.name.endswith("Exception"):
         error(clazz, None, None, "Exceptions must be named FooException")
 
 
@@ -1259,13 +1354,13 @@ def verify_units(clazz):
 
     for m in clazz.methods:
         typ = m.typ
-        if typ == "void":
+        if typ.name == "void":
             if len(m.args) != 1: continue
             typ = m.args[0].typ
 
-        if m.name.endswith("Fraction") and typ != "float":
+        if m.name.endswith("Fraction") and typ.name != "float":
             error(clazz, m, None, "Fractions must use floats")
-        if m.name.endswith("Percentage") and typ != "int":
+        if m.name.endswith("Percentage") and typ.name != "int":
             error(clazz, m, None, "Percentage must use ints")
 
 
@@ -1325,7 +1420,7 @@ def verify_method_name_not_kotlin_operator(clazz):
             warn(clazz, m, None, "Method can be invoked as a unary operator from Kotlin")
 
         # https://kotlinlang.org/docs/reference/operator-overloading.html#increments-and-decrements
-        if m.name in ['inc', 'dec'] and len(m.args) == 0 and m.typ != 'void':
+        if m.name in ['inc', 'dec'] and len(m.args) == 0 and m.typ.name != 'void':
             # This only applies if the return type is the same or a subtype of the enclosing class, but we have no
             # practical way of checking that relationship here.
             warn(clazz, m, None, "Method can be invoked as a pre/postfix inc/decrement operator from Kotlin")
@@ -1336,7 +1431,7 @@ def verify_method_name_not_kotlin_operator(clazz):
             unique_binary_op(m, m.name)
 
         # https://kotlinlang.org/docs/reference/operator-overloading.html#in
-        if m.name == 'contains' and len(m.args) == 1 and m.typ == 'boolean':
+        if m.name == 'contains' and len(m.args) == 1 and m.typ.name == 'boolean':
             warn(clazz, m, None, "Method can be invoked as a 'in' operator from Kotlin")
 
         # https://kotlinlang.org/docs/reference/operator-overloading.html#indexed
@@ -1350,7 +1445,7 @@ def verify_method_name_not_kotlin_operator(clazz):
         # https://kotlinlang.org/docs/reference/operator-overloading.html#assignments
         if m.name in ['plusAssign', 'minusAssign', 'timesAssign', 'divAssign', 'remAssign', 'modAssign'] \
                 and len(m.args) == 1 \
-                and m.typ == 'void':
+                and m.typ.name == 'void':
             warn(clazz, m, None, "Method can be invoked as a compound assignment operator from Kotlin")
             unique_binary_op(m, m.name[:-6])  # Remove 'Assign' suffix
 
@@ -1358,12 +1453,12 @@ def verify_method_name_not_kotlin_operator(clazz):
 def verify_collections_over_arrays(clazz):
     """Warn that [] should be Collections."""
 
-    safe = ["java.lang.String[]","byte[]","short[]","int[]","long[]","float[]","double[]","boolean[]","char[]"]
+    safe = ["java.lang.String","byte","short","int","long","float","double","boolean","char"]
     for m in clazz.methods:
-        if m.typ.endswith("[]") and m.typ not in safe:
+        if m.typ.is_array and m.typ.name not in safe:
             warn(clazz, m, None, "Method should return Collection<> (or subclass) instead of raw array")
         for arg in m.args:
-            if arg.typ.endswith("[]") and arg.typ not in safe:
+            if arg.typ.is_array and arg.typ.name not in safe:
                 warn(clazz, m, None, "Method argument should be Collection<> (or subclass) instead of raw array")
 
 
@@ -1379,7 +1474,7 @@ def verify_user_handle(clazz):
         if m.name.endswith("AsUser") or m.name.endswith("ForUser"): continue
         if re.match("on[A-Z]+", m.name): continue
         for a in m.args:
-            if "android.os.UserHandle" == a.typ:
+            if "android.os.UserHandle" == a.typ.name:
                 warn(clazz, m, None, "Method taking UserHandle should be named 'doFooAsUser' or 'queryFooForUser'")
 
 
@@ -1403,7 +1498,7 @@ def verify_services(clazz):
     if clazz.fullname != "android.content.Context": return
 
     for f in clazz.fields:
-        if f.typ != "java.lang.String": continue
+        if f.typ.name != "java.lang.String": continue
         found = re.match(r"([A-Z_]+)_SERVICE", f.name)
         if found:
             expected = found.group(1).lower()
@@ -1444,9 +1539,9 @@ def verify_icu(clazz):
 
     for m in clazz.ctors + clazz.methods:
         types = []
-        types.extend(m.typ)
+        types.extend(m.typ.name)
         for a in m.args:
-            types.append(a.typ)
+            types.append(a.typ.name)
         for arg in types:
             if arg in better:
                 warn(clazz, m, None, "Type %s should be replaced with richer ICU type %s" % (arg, better[arg]))
@@ -1546,6 +1641,57 @@ def examine_api(api):
     return failures
 
 
+def verify_packages(api, allowed_packages):
+    def is_allowed(typ_name, extra_types):
+        if typ_name == "?":
+            return True
+        if typ_name == "void" or typ_name in PRIMITIVE_TYPES:
+            return True
+        for p in allowed_packages + extra_types:
+            if typ_name == p or typ_name.startswith(p + "."):
+                return True
+        return False
+
+    def check_type(m, typ, extra_types):
+        for g in typ.generics:
+            check_type(m, g, extra_types)
+        for e in typ.extends:
+            check_type(m, e, extra_types)
+        if not is_allowed(typ.name, extra_types):
+            error(clazz, m, "GV7", "Class %s is not allowed. Allowed packages: %s." %
+                (typ, ".*, ".join(allowed_packages) + ".*"))
+
+    def check_member(m, extra_types):
+        check_type(m, m.typ, extra_types)
+
+    def check_method(m, extra_types):
+        check_member(m, extra_types)
+        for a in m.annotations:
+            check_member(a, [])
+        for a in m.args:
+            check_member(a, extra_types)
+            for an in a.annotations:
+                check_member(an, [])
+
+    for key in sorted(api.keys()):
+        clazz = api[key]
+        extra_types = [x.name for x in clazz.generics]
+        if not is_allowed(clazz.fullname, extra_types):
+            error(clazz, None, "GV7", "Class %s is not allowed. Allowed packages: %s." %
+                (clazz.typ, ".*, ".join(allowed_packages) + ".*"))
+        for g in clazz.generics:
+            check_type(None, g, extra_types)
+        for a in clazz.annotations:
+            check_member(a, [])
+        for f in clazz.fields:
+            check_member(f, extra_types)
+            for a in f.annotations:
+                check_member(a, [])
+        for m in clazz.methods:
+            check_method(m, extra_types + [x.name for x in m.generics])
+        for c in clazz.ctors:
+            check_method(c, extra_types)
+
 def verify_compat(cur, prev):
     """Find any incompatible API changes between two levels."""
     global failures
@@ -1560,8 +1706,8 @@ def verify_compat(cur, prev):
 
     def all_methods(api, clazz):
         methods = list(clazz.methods)
-        if clazz.extends is not None and clazz.extends in api:
-            methods.extend(all_methods(api, api[clazz.extends]))
+        if clazz.extends is not None and clazz.extends.name in api:
+            methods.extend(all_methods(api, api[clazz.extends.name]))
         return methods
 
     def method_exists(api, clazz, test):
@@ -1683,6 +1829,8 @@ if __name__ == "__main__":
     parser.add_argument("--filter-errors", nargs='*',
             help="Provide a list of erorr codes to consider. Filter will "
             "select only error codes that starts with the codes specified.")
+    parser.add_argument("--allowed-packages", nargs='*',
+            help="Restrict API to the packages specified in this argument.")
     parser.add_argument("--result-json", help="Put result in JSON file.", type=argparse.FileType('w'))
     args = vars(parser.parse_args())
 
@@ -1723,6 +1871,9 @@ if __name__ == "__main__":
 
         # look for compatibility issues
         compat_fail = verify_compat(cur, prev)
+
+    if args['allowed_packages'] is not None:
+        verify_packages(cur, args['allowed_packages'])
 
     # filter errors if filter was specified
     if args['filter_errors'] is not None:

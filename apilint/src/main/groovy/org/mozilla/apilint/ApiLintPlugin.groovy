@@ -72,6 +72,10 @@ class ApiLintPlugin implements Plugin<Project> {
                     args '--filter-errors'
                     args extension.lintFilters
                 }
+                if (extension.allowedPackages != null) {
+                    args '--allowed-packages'
+                    args extension.allowedPackages
+                }
             }
 
             apiCompatLint.dependsOn apiLintSingle
