@@ -1,5 +1,5 @@
 package test {
   public class TestClass {
-    method public testRemovedArg(int testArg);
+    method public void testRemovedArg(int testArg);
   }
 }

@@ -54,11 +54,17 @@ task testApiLint(type: Exec) {
         '--build-dir', buildDir
 }
 
+task unittestApiLint(type: Exec) {
+    workingDir '.'
+    commandLine 'python', 'src/test/resources/apilint_unittest.py'
+}
+
 task testChangelogCheck(type: Exec) {
     workingDir '.'
     commandLine 'python', 'src/test/resources/changelog-check_test.py'
 }
 
+test.dependsOn unittestApiLint
 test.dependsOn testApiLint
 test.dependsOn testChangelogCheck
 
