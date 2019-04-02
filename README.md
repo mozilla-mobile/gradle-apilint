@@ -135,7 +135,7 @@ optional. See also [Changelog](#changelog).
 all lints can fail the build. Filters will match any error code that starts
 with the string specified, e.g. `GV` will match `GV1`, `GV2`, ...
 
-<code><b>allowedPackages</b><code> List of packages that are allowed in the
+<code><b>allowedPackages</b></code> List of packages that are allowed in the
 API. If this list is set, apilint will check that every type mentioned in the
 API belongs to any of the packages listed. Adding a package implicitly allows
 all sub-packages too, so allowing package `a.b` will allow `a.b.c` too.
