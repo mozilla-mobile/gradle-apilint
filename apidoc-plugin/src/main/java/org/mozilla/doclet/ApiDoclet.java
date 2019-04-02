@@ -9,9 +9,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -221,9 +224,10 @@ public class ApiDoclet {
         return collectHierarchy(classDoc, walker, new ArrayList<T>());
     }
 
-    private String toLine(ClassDoc classDoc) {
+    private String toLine(ClassDoc classDoc, Writer writer) {
         String classLine = annotationFragment(
-                collectHierarchy(classDoc, new AnnotationWalker()).stream());
+                collectHierarchy(classDoc, new AnnotationWalker()).stream(),
+                writer);
 
         classLine += classDoc.modifiers() + " ";
 
@@ -247,12 +251,12 @@ public class ApiDoclet {
                 // Ignore trivial superclass
                 && !classDoc.superclass().toString().equals("java.lang.Object")
                 && !classDoc.isEnum()) {
-            classLine += "extends " + classDoc.superclass() + " ";
+            classLine += "extends " + typeFragment(classDoc.superclass(), writer) + " ";
         }
 
         if (classDoc.interfaces().length > 0) {
             classLine += "implements " + sorted(classDoc.interfaces())
-                .map(ClassDoc::toString)
+                .map(t -> typeFragment(t, writer))
                 .collect(Collectors.joining(" "));
             classLine += " ";
         }
@@ -267,35 +271,35 @@ public class ApiDoclet {
             return;
         }
 
-        writer.line(toLine(classDoc));
+        writer.line(toLine(classDoc, writer));
 
         Stream.<Stream<? extends ProgramElementDoc>> of(
                 sorted(classDoc.constructors()),
                 sorted(classDoc.methods())
                         // Don't add @Override methods to the API
-                        .filter(m -> findSuperMethod(m) == null),
+                        .filter(m -> findSuperMethod(m, writer) == null),
                 sorted(classDoc.enumConstants()),
                 sorted(classDoc.fields()))
-            .flatMap(s -> s.map(this::toLine))
+            .flatMap(s -> s.map(p -> toLine(p, writer)))
             .forEach(writer.indent()::line);
 
         writer.line("}");
         writer.newLine();
     }
 
-    private Stream<String> from(Stream<AnnotationDesc> annotations) {
+    private Stream<String> from(Stream<AnnotationDesc> annotations, Writer writer) {
         return annotations.map(AnnotationDesc::annotationType)
                     .map(AnnotationTypeDoc::toString)
                     .filter(ANNOTATIONS::contains)
-                    .map(s -> "@" + s);
+                    .map(s -> "@" + writer.import_(s));
     }
 
-    private String annotationFragment(ProgramElementDoc member) {
-        return annotationFragment(Stream.of(member.annotations()));
+    private String annotationFragment(ProgramElementDoc member, Writer writer) {
+        return annotationFragment(Stream.of(member.annotations()), writer);
     }
 
-    private String annotationFragment(Stream<AnnotationDesc> annotations) {
-        String fragment = from(annotations)
+    private String annotationFragment(Stream<AnnotationDesc> annotations, Writer writer) {
+        String fragment = from(annotations, writer)
                 .distinct()
                 .collect(Collectors.joining(" "));
         if (fragment.equals("")) {
@@ -318,13 +322,13 @@ public class ApiDoclet {
         }
     }
 
-    private String parametrizedTypeFragment(ParameterizedType type) {
+    private String parametrizedTypeFragment(ParameterizedType type, Writer writer) {
         String typeArgs =
                 Stream.of(type.typeArguments())
-                        .map(this::typeFragment)
+                        .map(a -> typeFragment(a, writer))
                         .collect(Collectors.joining(","));
 
-        String fragment = type.qualifiedTypeName();
+        String fragment = writer.import_(type.qualifiedTypeName());
 
         if (!typeArgs.equals("")) {
             fragment += "<" + typeArgs + ">";
@@ -333,24 +337,24 @@ public class ApiDoclet {
         return fragment + type.dimension();
     }
 
-    private String typeFragment(Type type) {
+    private String typeFragment(Type type, Writer writer) {
         if (type.asParameterizedType() != null) {
-            return parametrizedTypeFragment(type.asParameterizedType());
+            return parametrizedTypeFragment(type.asParameterizedType(), writer);
         }
 
-        return type.qualifiedTypeName() + type.dimension();
+        return writer.import_(type.qualifiedTypeName()) + type.dimension();
     }
 
-    private String paramFragment(Parameter parameter) {
-        return annotationFragment(Stream.of(parameter.annotations()))
-                + typeFragment(parameter.type());
+    private String paramFragment(Parameter parameter, Writer writer) {
+        return annotationFragment(Stream.of(parameter.annotations()), writer)
+                + typeFragment(parameter.type(), writer);
     }
 
-    private String paramsFragment(ExecutableMemberDoc executable) {
+    private String paramsFragment(ExecutableMemberDoc executable, Writer writer) {
         String fragment = "(";
 
         fragment += Stream.of(executable.parameters())
-                .map(this::paramFragment)
+                .map(p -> paramFragment(p, writer))
                 .collect(Collectors.joining(", "));
 
         if (executable.isVarArgs()) {
@@ -398,12 +402,12 @@ public class ApiDoclet {
         }
     }
 
-    private String typesFragment(ExecutableMemberDoc executable) {
+    private String typesFragment(ExecutableMemberDoc executable, Writer writer) {
         String fragment = "(";
 
         fragment += Stream.of(executable.parameters())
                 .map(p -> p.type())
-                .map(this::typeFragment)
+                .map(t -> typeFragment(t, writer))
                 .collect(Collectors.joining(", "));
 
         if (executable.isVarArgs()) {
@@ -413,7 +417,7 @@ public class ApiDoclet {
         return fragment + ")";
     }
 
-    private ExecutableMemberDoc findSuperMethod(ExecutableMemberDoc member) {
+    private ExecutableMemberDoc findSuperMethod(ExecutableMemberDoc member, Writer writer) {
         List<MethodDoc> methods = collectHierarchy(member.containingClass(),
                 new InterfaceMethodWalker());
 
@@ -425,15 +429,15 @@ public class ApiDoclet {
 
         return methods.stream()
                 .filter(m -> m.name().equals(member.name())
-                            && typesFragment(m).equals(typesFragment(member)))
+                            && typesFragment(m, writer).equals(typesFragment(member, writer)))
                 .findFirst()
                 .orElse(null);
     }
 
-    private String toLine(ProgramElementDoc member) {
+    private String toLine(ProgramElementDoc member, Writer writer) {
         String line = tag(member) + " ";
 
-        line += annotationFragment(Stream.of(member.annotations()));
+        line += annotationFragment(Stream.of(member.annotations()), writer);
 
         if (member instanceof MethodDoc) {
             line += ((MethodDoc) member).isDefault() ? "default " : "";
@@ -448,15 +452,15 @@ public class ApiDoclet {
         }
 
         if (member instanceof MethodDoc) {
-            line += (typeFragment(((MethodDoc) member).returnType())) + " ";
+            line += (typeFragment(((MethodDoc) member).returnType(), writer)) + " ";
         } else if (member instanceof FieldDoc){
-            line += ((FieldDoc) member).type() + " ";
+            line += typeFragment(((FieldDoc) member).type(), writer) + " ";
         }
 
         line += member.name();
 
         if (member instanceof ExecutableMemberDoc) {
-            line += paramsFragment((ExecutableMemberDoc) member);
+            line += paramsFragment((ExecutableMemberDoc) member, writer);
         }
 
         if (member instanceof FieldDoc) {
@@ -471,29 +475,74 @@ public class ApiDoclet {
         void newLine();
         void line(String text);
         void close();
+        String import_(String path);
     }
 
     private static class WriterImpl implements Writer {
         private final BufferedWriter mWriter;
         private final int mIndentation;
+        private final StringBuilder mStringBuilder;
+        private final Map<String, String> mImports;
 
         private static final String INDENTATION = "  ";
 
         public WriterImpl(BufferedWriter writer) {
-            this(writer, 0);
+            this(writer, 0, new StringBuilder(), new HashMap<>());
         }
 
-        private WriterImpl(BufferedWriter writer, int indentation) {
+        private WriterImpl(BufferedWriter writer, int indentation, StringBuilder stringBuilder,
+                           Map<String, String> imports) {
             mWriter = writer;
             mIndentation = indentation;
+            mStringBuilder = stringBuilder;
+            mImports = imports;
         }
 
         public Writer indent() {
-            return new WriterImpl(mWriter, mIndentation + 1);
+            return new WriterImpl(mWriter, mIndentation + 1, mStringBuilder, mImports);
+        }
+
+        public String import_(String path) {
+            String[] split = path.split("\\.");
+            if (split.length == 1) {
+                // Primitive type, nothing to import
+                return path;
+            }
+
+            int firstClassIndex = 1;
+            while (firstClassIndex <= split.length &&
+                    Character.isLowerCase(split[firstClassIndex-1].charAt(0))) {
+                firstClassIndex++;
+            }
+
+            String base = split[firstClassIndex - 1];
+            String imported = String.join(".", Arrays.copyOfRange(split, 0, firstClassIndex));
+
+            if (mImports.containsKey(base) && !mImports.get(base).equals(imported)) {
+                // Conflicting import
+                return path;
+            }
+
+            mImports.put(base, imported);
+            return String.join(".", Arrays.copyOfRange(split, firstClassIndex -1, split.length));
         }
 
         public void close() {
             try {
+                List<String> imports = new ArrayList<>(mImports.values());
+                Collections.sort(imports);
+
+                for (String imported: imports) {
+                    mWriter.write("import ");
+                    mWriter.write(imported);
+                    mWriter.write(";\n");
+                }
+
+                if (mImports.values().size() > 0) {
+                    mWriter.write("\n");
+                }
+
+                mWriter.write(mStringBuilder.toString());
                 mWriter.close();
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
@@ -509,14 +558,10 @@ public class ApiDoclet {
         }
 
         private void line(String text, int indent) {
-            try {
-                for (int i = 0; i < indent; i++) {
-                    mWriter.write(INDENTATION);
-                }
-                mWriter.write(text + "\n");
-            } catch (IOException e) {
-                throw new IllegalArgumentException(e);
+            for (int i = 0; i < indent; i++) {
+                mStringBuilder.append(INDENTATION);
             }
+            mStringBuilder.append(text + "\n");
         }
     }
 }
