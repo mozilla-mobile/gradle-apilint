@@ -5,6 +5,6 @@
 package org.mozilla.apilint;
 
 public class Config {
-    public final static String API_DOC_VERSION = "master-SNAPSHOT";
+    public final static String API_DOC_VERSION = "0.1.9";
     public final static String GROUP = "org.mozilla.apilint";
 }
