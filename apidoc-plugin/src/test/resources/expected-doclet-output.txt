@@ -1,29 +1,38 @@
+import android.support.annotation.NonNull;
+import java.lang.Class;
+import java.lang.Deprecated;
+import java.lang.String;
+import java.lang.annotation.Annotation;
+import java.util.List;
+import org.mozilla.test.TestClass;
+import org.mozilla.test.testsorta.TestSort;
+
 package org.mozilla.test {
 
   public class TestClass {
     ctor public TestClass();
-    ctor public TestClass(java.lang.String);
-    ctor public TestClass(java.lang.String, int);
-    ctor @java.lang.Deprecated public TestClass(float);
+    ctor public TestClass(String);
+    ctor public TestClass(String, int);
+    ctor @Deprecated public TestClass(float);
     ctor public TestClass(int, float);
     ctor protected TestClass(boolean);
-    method @java.lang.Deprecated public void testAnnotation();
+    method @Deprecated public void testAnnotation();
     method public void testArrayArg(int[]);
-    method public <T> void testCompositeParam(java.util.List<T>);
+    method public <T> void testCompositeParam(List<T>);
     method public final void testFinal();
     method public void testFinalArg(int);
     method public void testHiddenAnnotation();
-    method public final void testMethodAnnotation(@android.support.annotation.NonNull java.lang.String);
-    method public final void testMultipleMethodAnnotation(@android.support.annotation.NonNull java.lang.String, @android.support.annotation.NonNull java.lang.String);
-    method public <T> void testParamNestedCompositeType(java.util.List<java.util.List<T>>);
-    method public <T> java.util.List<T> testReturnCompositeType();
-    method public <T> java.util.List<java.util.List<T>> testReturnNestedCompositeType();
-    method @android.support.annotation.NonNull public final java.lang.String testReturnTypeAnnotation();
+    method public final void testMethodAnnotation(@NonNull String);
+    method public final void testMultipleMethodAnnotation(@NonNull String, @NonNull String);
+    method public <T> void testParamNestedCompositeType(List<List<T>>);
+    method public <T> List<T> testReturnCompositeType();
+    method public <T> List<List<T>> testReturnNestedCompositeType();
+    method @NonNull public final String testReturnTypeAnnotation();
     method public <T> T testReturnTypeUnbounded();
     method public <T extends java.lang.Runnable> T testReturnTypeWithBound();
     method public static void testStatic();
-    method public java.lang.String testStringMethod();
-    method public java.lang.String testStringMethodWithArg(java.lang.String);
+    method public String testStringMethod();
+    method public String testStringMethodWithArg(String);
     method public synchronized void testSynchronized();
     method public <T> void testTypeVariableUnbounded(T);
     method public <T extends java.lang.Runnable> void testTypeVariableWithBounds(T);
@@ -31,20 +40,22 @@ package org.mozilla.test {
     method public void testVarArgsOneArg(int...);
     method public void testVarArgsTwoArgs(int, int...);
     method public void testVoidMethod();
-    method public void testVoidMethodWithArg(java.lang.String);
+    method public void testVoidMethodWithArg(String);
     method protected void testProtectedMethod();
-    field public static final java.util.List<java.lang.String> TEST_COMPOSITE_TYPE;
-    field @java.lang.Deprecated public static final int TEST_DEPRECATED_CONST = 1;
+    field public static final List<String> TEST_COMPOSITE_TYPE;
+    field @Deprecated public static final int TEST_DEPRECATED_CONST = 1;
     field public static final int TEST_HIDDEN_ANNOTATION = 2;
-    field public static final java.util.List<java.util.List<java.lang.String>> TEST_NESTED_COMPOSITE_TYPE;
-    field public java.lang.String testFieldWithValue;
-    field public java.lang.String testFieldWithoutValue;
-    field public final java.lang.String testFinalField = "finalValue";
-    field public static final java.lang.String testFinalStaticField = "finalStaticValue";
+    field public static final List<List<String>> TEST_NESTED_COMPOSITE_TYPE;
+    field public static TestSort sort1;
+    field public static org.mozilla.test.testsortb.TestSort sort2;
+    field public String testFieldWithValue;
+    field public String testFieldWithoutValue;
+    field public final String testFinalField = "finalValue";
+    field public static final String testFinalStaticField = "finalStaticValue";
     field protected int testProtectedField;
   }
 
-  @java.lang.Deprecated public class TestClass.DeprecatedClass {
+  @Deprecated public class TestClass.DeprecatedClass {
     ctor public DeprecatedClass();
   }
 
@@ -56,18 +67,18 @@ package org.mozilla.test {
     ctor public TestAbstractClass();
   }
 
-  public static interface TestClass.TestAnnotation implements java.lang.annotation.Annotation {
+  public static interface TestClass.TestAnnotation implements Annotation {
   }
 
-  @java.lang.Deprecated public static class TestClass.TestAnnotationBase {
-    method @java.lang.Deprecated public void methodToOverride();
-    method public void methodToOverrideWithArgAnnotation(@android.support.annotation.NonNull java.lang.String);
+  @Deprecated public static class TestClass.TestAnnotationBase {
+    method @Deprecated public void methodToOverride();
+    method public void methodToOverrideWithArgAnnotation(@NonNull String);
   }
 
-  @java.lang.Deprecated public static class TestClass.TestAnnotationChildDuplicateAnnotation extends org.mozilla.test.TestClass.TestAnnotationBase {
+  @Deprecated public static class TestClass.TestAnnotationChildDuplicateAnnotation extends TestClass.TestAnnotationBase {
   }
 
-  @java.lang.Deprecated public static class TestClass.TestAnnotationChildShouldHaveAnnotation extends org.mozilla.test.TestClass.TestAnnotationBase {
+  @Deprecated public static class TestClass.TestAnnotationChildShouldHaveAnnotation extends TestClass.TestAnnotationBase {
     method public void methodToOverride(int);
   }
 
@@ -76,13 +87,13 @@ package org.mozilla.test {
   }
 
   public static final enum TestClass.TestEnum {
-    method public static org.mozilla.test.TestClass.TestEnum valueOf(java.lang.String);
-    method public static org.mozilla.test.TestClass.TestEnum[] values();
-    enum_constant public static final org.mozilla.test.TestClass.TestEnum TestEnumConstantOne;
-    enum_constant public static final org.mozilla.test.TestClass.TestEnum TestEnumConstantTwo;
+    method public static TestClass.TestEnum valueOf(String);
+    method public static TestClass.TestEnum[] values();
+    enum_constant public static final TestClass.TestEnum TestEnumConstantOne;
+    enum_constant public static final TestClass.TestEnum TestEnumConstantTwo;
   }
 
-  public static class TestClass.TestExtends extends org.mozilla.test.TestClass.TestInterfaceImpl {
+  public static class TestClass.TestExtends extends TestClass.TestInterfaceImpl {
     ctor public TestExtends();
   }
 
@@ -90,7 +101,7 @@ package org.mozilla.test {
     method public void testInterfaceMethod();
   }
 
-  public static class TestClass.TestInterfaceImpl implements org.mozilla.test.TestClass.TestInterface {
+  public static class TestClass.TestInterfaceImpl implements TestClass.TestInterface {
     ctor public TestInterfaceImpl();
   }
 
@@ -101,7 +112,7 @@ package org.mozilla.test {
     method public void testTypeVariableMethod(T);
   }
 
-  public static class TestClass.TestMultipleInterfaceImpl implements org.mozilla.test.TestClass.TestInterface org.mozilla.test.TestClass.TestInterfaceTwo {
+  public static class TestClass.TestMultipleInterfaceImpl implements TestClass.TestInterface TestClass.TestInterfaceTwo {
     ctor public TestMultipleInterfaceImpl();
   }
 

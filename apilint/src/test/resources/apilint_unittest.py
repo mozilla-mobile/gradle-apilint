@@ -19,7 +19,7 @@ class ApilintUnittest(unittest.TestCase):
         self.collect_chunks("public <T>", " ", ["public", "<T>"])
 
     def test_type_extends(self):
-        typ = Type(None, None, "java.lang.Map<T extends F>", None, None)
+        typ = Type(None, None, "java.lang.Map<T extends F>", None, None, {})
 
         self.assertEqual(typ.name, "java.lang.Map")
 
@@ -29,9 +29,20 @@ class ApilintUnittest(unittest.TestCase):
         self.assertEqual(len(typ.generics[0].extends), 1)
         self.assertEqual(typ.generics[0].extends[0].name, "F")
 
-    def test_type_extends_multiple(self):
-        typ = Type(None, None, "java.lang.Map<T extends a.b.F & a.d.G>", None, None)
+    def test_repr_import_multiple(self):
+        imports = {
+            'Map': 'java.lang.Map',
+            'F': 'a.b.F',
+            'G': 'a.d.G',
+        }
+        typ = Type(None, None, "Map<T extends F & G>", None, None, imports)
 
+        self.assertEqual(typ.ident(), "java.lang.Map<T extends a.b.F & a.d.G>")
+
+    def test_type_extends_multiple(self):
+        typ = Type(None, None, "java.lang.Map<T extends a.b.F & a.d.G>", None, None, {})
+
+        self.assertEqual(typ.ident(), "java.lang.Map<T extends a.b.F & a.d.G>")
         self.assertEqual(len(typ.generics), 1)
 
         self.assertEqual(len(typ.generics[0].extends), 2)
@@ -39,7 +50,7 @@ class ApilintUnittest(unittest.TestCase):
         self.assertEqual(typ.generics[0].extends[1].name, "a.d.G")
 
     def test_type_nested_generic_extends(self):
-        typ = Type(None, None, "java.lang.Map<T extends F, H extends G>", None, None)
+        typ = Type(None, None, "java.lang.Map<T extends F, H extends G>", None, None, {})
         self.assertEqual(typ.name, "java.lang.Map")
 
         self.assertEqual(len(typ.generics), 2)
@@ -52,9 +63,29 @@ class ApilintUnittest(unittest.TestCase):
         self.assertEqual(len(typ.generics[1].extends), 1)
         self.assertEqual(typ.generics[1].extends[0].name, "G")
 
-    def test_type_nested_generic(self):
-        typ = Type(None, None, "A<B<C<D,F>, C<G,H>>>", None, None)
+    def test_basic_import(self):
+        typ = Type(None, None, "D", None, None, {'D': 'a.b.c.D'})
+        self.assertEqual(typ.name, "a.b.c.D")
+        self.assertEqual(typ.ident(), "a.b.c.D")
 
+    def test_subclass_import(self):
+        typ = Type(None, None, "D.E", None, None, {'D': 'a.b.c.D'})
+        self.assertEqual(typ.name, "a.b.c.D.E")
+
+    def test_generic_import(self):
+        typ = Type(None, None, "A<D>", None, None, {'D': 'a.b.c.D'})
+        self.assertEqual(typ.name, "A")
+        self.assertEqual(typ.generics[0].name, "a.b.c.D")
+        self.assertEqual(typ.ident(), "A<a.b.c.D>")
+
+    def test_conflicting_import(self):
+        typ = Type(None, None, "a.b.c.D", None, None, {'D': 'a.b.d.D'})
+        self.assertEqual(typ.name, "a.b.c.D")
+
+    def test_type_nested_generic(self):
+        typ = Type(None, None, "A<B<C<D,F>, C<G,H>>>", None, None, {})
+
+        self.assertEqual(typ.ident(), "A<B<C<D, F>, C<G, H>>>")
         self.assertEqual(typ.name, "A")
 
         self.assertEqual(len(typ.generics), 1)

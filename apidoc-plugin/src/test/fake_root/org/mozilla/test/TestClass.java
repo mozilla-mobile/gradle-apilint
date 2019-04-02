@@ -157,6 +157,10 @@ public class TestClass {
         TestEnumConstantTwo,
     }
 
+    // Test that imports don't confuse classes with same name
+    public static org.mozilla.test.testsorta.TestSort sort1;
+    public static org.mozilla.test.testsortb.TestSort sort2;
+
     public static class TestSort {
         private TestSort() {}
 

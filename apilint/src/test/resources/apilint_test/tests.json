@@ -37,7 +37,7 @@
     "expected": "INCOMPATIBLE"
   },{
     "test": "test-annotation-add",
-    "expected": "INCOMPATIBLE"
+    "expected": "API_CHANGE"
   },{
     "test": "test-annotation-remove",
     "expected": "INCOMPATIBLE"
@@ -219,5 +219,8 @@
   },{
     "test": "test-reoder-class",
     "expected": "SUCCESS"
+  },{
+    "test": "test-import",
+    "expected": "API_CHANGE"
   }
 ]

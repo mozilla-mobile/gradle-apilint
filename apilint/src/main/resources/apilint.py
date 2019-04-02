@@ -66,13 +66,13 @@ def ident(raw):
 
 
 class Annotation():
-    def __init__(self, clazz, source, line, raw, blame):
+    def __init__(self, clazz, source, line, raw, blame, imports):
         self.clazz = clazz
         self.line = line
         self.raw = raw[1:]
-        self.typ = Type(clazz, self, raw[1:], line, blame)
+        self.typ = Type(clazz, self, raw[1:], line, blame, imports)
         self.blame = blame
-        self.ident = self.raw
+        self.ident = self.typ.name
         self.source = source
 
     def __hash__(self):
@@ -82,7 +82,7 @@ class Annotation():
         return self.raw
 
 class Field():
-    def __init__(self, clazz, line, raw, blame):
+    def __init__(self, clazz, line, raw, blame, imports):
         self.clazz = clazz
         self.line = line
         self.raw = raw.strip(" {;")
@@ -96,17 +96,18 @@ class Field():
             while r in raw: raw.remove(r)
 
         self.annotations = [
-            Annotation(clazz, self, line, a, blame) for a in raw if a.startswith("@")]
+            Annotation(clazz, self, line, a, blame, imports) for a in raw if a.startswith("@")]
 
         raw = [x for x in raw if not x.startswith("@")]
 
-        self.typ = Type(clazz, self, raw[0], line, blame)
+        self.typ = Type(clazz, self, raw[0], line, blame, imports)
         self.name = raw[1].strip(";")
         if len(raw) >= 4 and raw[2] == "=":
             self.value = raw[3].strip(';"')
         else:
             self.value = None
-        self.ident = ident(self.raw)
+
+        self.ident = "field %s %s = %s;" % (self.typ.ident(), self.name, self.value)
 
     def __hash__(self):
         return hash(self.raw)
@@ -116,13 +117,13 @@ class Field():
 
 
 class Argument():
-    def __init__(self, clazz, source, raw, line, blame):
+    def __init__(self, clazz, source, raw, line, blame, imports):
         raw = collect_chunks(raw, "\s")
         self.annotations = [
-            Annotation(clazz, self, line, a, blame) for a in raw if a.startswith("@")]
+            Annotation(clazz, self, line, a, blame, imports) for a in raw if a.startswith("@")]
         raw = [x for x in raw if not x.startswith("@")]
 
-        self.typ = Type(clazz, source, " ".join(raw), line, blame)
+        self.typ = Type(clazz, source, " ".join(raw), line, blame, imports)
         self.line = line
         self.blame = blame
         self.clazz = clazz
@@ -167,7 +168,7 @@ class Method():
         arguments = collect_chunks(line[arg_begin+1:arg_end], ",")
         return (raw, arguments)
 
-    def __init__(self, clazz, line, raw, blame):
+    def __init__(self, clazz, line, raw, blame, imports):
         self.clazz = clazz
         self.line = line
         self.raw = raw.strip(" {;")
@@ -186,18 +187,18 @@ class Method():
             while r in raw: raw.remove(r)
 
         self.annotations = [
-            Annotation(clazz, self, line, a, blame) for a in raw if a.startswith("@")]
+            Annotation(clazz, self, line, a, blame, imports) for a in raw if a.startswith("@")]
 
         raw = [x for x in raw if not x.startswith("@")]
 
         if raw[0].startswith("<"):
-            self.generics = Type(clazz, self, raw[0], line, blame).generics
+            self.generics = Type(clazz, self, raw[0], line, blame, imports).generics
             raw = raw[1:]
         else:
             self.generics = []
 
         typ_name = raw[0] if raw[0] != "ctor" else clazz.fullname
-        self.typ = Type(clazz, self, typ_name, line, blame)
+        self.typ = Type(clazz, self, typ_name, line, blame, imports)
 
         self.name = raw[1]
         self.args = []
@@ -205,9 +206,10 @@ class Method():
 
         #TODO: throws
         for r in arguments:
-            self.args.append(Argument(clazz, self, r, line, blame))
+            self.args.append(Argument(clazz, self, r, line, blame, imports))
 
-        self.ident = ident(self.raw)
+        self.ident = "method %s %s(%s);" % (self.typ.ident(), self.name,
+                                           ", ".join(x.typ.ident() for x in self.args))
 
     def __hash__(self):
         return hash(self.raw)
@@ -216,40 +218,59 @@ class Method():
         return self.raw
 
 class Type():
-    def __init__(self, clazz, source, raw, line, blame):
+    def __init__(self, clazz, source, raw, line, blame, imports):
         self.line = line
         self.blame = blame
         self.source = source
+        self.raw = raw
 
         raw = collect_chunks(raw, "extends", len("extends"))
         if len(raw) > 1:
             extends = collect_chunks(raw[1], "&")
-            self.extends = [Type(clazz, self, e, line, blame) for e in extends]
+            self.extends = [Type(clazz, self, e, line, blame, imports) for e in extends]
         else:
             self.extends = []
 
         raw = raw[0]
         if "<" in raw:
             generics_string = raw[raw.find("<")+1:raw.rfind(">")]
-            self.generics = [Type(clazz, self, x, line, blame)
+            self.generics = [Type(clazz, self, x, line, blame, imports)
                 for x in collect_chunks(generics_string, ",")]
             raw = raw[:raw.find("<")]
         else:
             self.generics = []
 
         if raw.endswith("[]"):
-            self.name = raw[:-2]
+            self.name = self.resolve(raw[:-2], imports)
             self.is_array = True
         else:
-            self.name = raw
+            self.name = self.resolve(raw, imports)
             self.is_array = False
 
-    def __repr__(self):
-        return self.name
+    def resolve(self, name, imports):
+        # Never resolve primitive types
+        if name in PRIMITIVE_TYPES:
+            return name
 
+        split = name.split(".")
+        if split[0] in imports:
+            resolved = ".".join([imports[split[0]]] + split[1:])
+            return resolved
+        return name
+
+    def ident(self):
+        result = self.name
+        if self.generics:
+            result += "<" + ", ".join(x.ident() for x in self.generics) + ">"
+        if self.extends:
+            result += " extends " + " & ".join(x.ident() for x in self.extends)
+        return result
+
+    def __repr__(self):
+        return self.ident()
 
 class Class():
-    def __init__(self, pkg, line, raw, blame):
+    def __init__(self, pkg, line, raw, blame, imports):
         self.pkg = pkg
         self.line = line
         self.raw = raw.strip(" {;")
@@ -273,17 +294,19 @@ class Class():
             raise ValueError("Funky class type %s" % (self.raw))
 
         if "extends" in raw:
-            self.extends = Type(self, None, raw[raw.index("extends")+1], line, blame)
+            self.extends = Type(self, None, raw[raw.index("extends")+1], line,
+                                blame, imports)
             self.extends_path = collect_chunks(self.extends.name, ".")
         else:
             self.extends = None
             self.extends_path = []
 
         self.annotations = [
-            Annotation(self, None, line, a, blame) for a in raw if a.startswith("@")]
+            Annotation(self, None, line, a, blame, imports) for a in raw if a.startswith("@")]
 
         if "<" in self.fullname:
-            self.generics = Type(self, None, self.fullname, line, blame).generics
+            self.generics = Type(self, None, self.fullname, line, blame,
+                                 imports).generics
             self.fullname = re.sub("<.+?>", "", self.fullname)
         else:
             self.generics = []
@@ -321,6 +344,7 @@ def _parse_stream(f, clazz_cb=None):
     pkg = None
     clazz = None
     blame = None
+    imports = {}
 
     re_blame = re.compile("^([a-z0-9]{7,}) \(<([^>]+)>.+?\) (.+?)$")
     for raw in f:
@@ -333,23 +357,26 @@ def _parse_stream(f, clazz_cb=None):
         else:
             blame = None
 
-        if raw.startswith("package"):
+        if raw.startswith("import"):
+            imp = raw[raw.index("import")+7:-1]
+            imports[imp.split(".")[-1]] = imp
+        elif raw.startswith("package"):
             pkg = Package(line, raw, blame)
         elif raw.startswith("  ") and raw.endswith("{"):
             # When provided with class callback, we treat as incremental
             # parse and don't build up entire API
             if clazz and clazz_cb:
                 clazz_cb(clazz)
-            clazz = Class(pkg, line, raw, blame)
+            clazz = Class(pkg, line, raw, blame, imports)
             api[clazz.fullname] = clazz
         elif raw.startswith("    ctor"):
-            clazz.ctors.append(Method(clazz, line, raw, blame))
+            clazz.ctors.append(Method(clazz, line, raw, blame, imports))
         elif raw.startswith("    method"):
-            clazz.methods.append(Method(clazz, line, raw, blame))
+            clazz.methods.append(Method(clazz, line, raw, blame, imports))
         elif raw.startswith("    field"):
-            clazz.fields.append(Field(clazz, line, raw, blame))
+            clazz.fields.append(Field(clazz, line, raw, blame, imports))
         elif raw.startswith("    enum_constant"):
-            clazz.fields.append(Field(clazz, line, raw, blame))
+            clazz.fields.append(Field(clazz, line, raw, blame, imports))
 
     # Handle last trailing class
     if clazz and clazz_cb:
@@ -650,14 +677,14 @@ def verify_threading_annotations(clazz):
 
     # If the annotation is on the class than it applies to every method
     for a in clazz.annotations:
-        if repr(a) in THREADING_ANNOTATIONS:
+        if a.typ.name in THREADING_ANNOTATIONS:
             return []
 
     # Otherwise check all methods
     for f in clazz.methods:
         has_annotation = False
         for a in f.annotations:
-            if repr(a) in THREADING_ANNOTATIONS:
+            if a.typ.name in THREADING_ANNOTATIONS:
                 has_annotation = True
         if not has_annotation:
             error(clazz, f, "GV3", "Method missing threading annotation. Needs "
@@ -680,7 +707,7 @@ def verify_nullability_annotations(clazz):
                 subject.typ.name in PRIMITIVE_TYPES):
             return True
         for a in subject.annotations:
-            if repr(a) in NULLABILITY_ANNOTATIONS:
+            if a.typ.name in NULLABILITY_ANNOTATIONS:
                 return True
         return False
 
@@ -1699,10 +1726,10 @@ def verify_compat(cur, prev):
     def class_exists(api, test):
         return test.fullname in api
 
-    def ctor_exists(api, clazz, test):
+    def find_ctor(api, clazz, test):
         for m in clazz.ctors:
-            if m.ident == test.ident: return True
-        return False
+            if m.ident == test.ident: return m
+        return None
 
     def all_methods(api, clazz):
         methods = list(clazz.methods)
@@ -1710,11 +1737,11 @@ def verify_compat(cur, prev):
             methods.extend(all_methods(api, api[clazz.extends.name]))
         return methods
 
-    def method_exists(api, clazz, test):
+    def find_method(api, clazz, test):
         methods = all_methods(api, clazz)
         for m in methods:
-            if m.ident == test.ident: return True
-        return False
+            if m.ident == test.ident: return m
+        return None
 
     def field_exists(api, clazz, test):
         for f in clazz.fields:
@@ -1741,13 +1768,23 @@ def verify_compat(cur, prev):
                 error(prev_clazz, test, None, "Annotation removed or incompatible change")
 
         for test in prev_clazz.ctors:
-            if not ctor_exists(cur, cur_clazz, test):
+            cur_ctor = find_ctor(cur, cur_clazz, test)
+            if not cur_ctor:
                 error(prev_clazz, test, None, "Constructor removed or incompatible change")
+                break
+            for prev_annotation in test.annotations:
+                if not annotation_exists(cur, cur_ctor, prev_annotation):
+                    error(prev_clazz, prev_annotation, None, "Annotation removed or incompatible change")
 
         methods = all_methods(prev, prev_clazz)
         for test in methods:
-            if not method_exists(cur, cur_clazz, test):
+            cur_method = find_method(cur, cur_clazz, test)
+            if not cur_method:
                 error(prev_clazz, test, None, "Method removed or incompatible change")
+                break
+            for prev_annotation in test.annotations:
+                if not annotation_exists(cur, cur_method, prev_annotation):
+                    error(prev_clazz, prev_annotation, None, "Annotation removed or incompatible change")
 
         for test in prev_clazz.fields:
             if not field_exists(cur, cur_clazz, test):
