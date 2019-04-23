@@ -181,6 +181,13 @@
     "rule": "GV7",
     "allowed_packages": ["test", "android"]
   },{
+    "test": "test-enum-annotations",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV8",
+    "allowed_packages": ["test", "android"]
+  },{
     "test": "test-nullable-method-with-annotations",
     "expected": "SUCCESS",
     "check_compat": false,

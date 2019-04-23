@@ -1580,6 +1580,17 @@ def verify_clone(clazz):
         if m.name == "clone":
             error(clazz, m, None, "Provide an explicit copy constructor instead of implementing clone()")
 
+def verify_enum_annotations(clazz):
+    ENUM_ANNOTATIONS = [
+        "android.support.annotation.IntDef",
+        "android.support.annotation.LongDef",
+        "android.support.annotation.StringDef"
+    ]
+
+    for a in clazz.annotations:
+        if a.typ.name in ENUM_ANNOTATIONS:
+            error(clazz, a, "GV8", "@IntDef, @LongDef, @StringDef should not appear in the API, make the @interface package private.")
+
 
 def examine_clazz(clazz):
     """Find all style issues in the given class."""
@@ -1648,6 +1659,7 @@ def examine_clazz(clazz):
     verify_threading_annotations(clazz)
     verify_nullability_annotations(clazz)
     verify_default_impl(clazz)
+    verify_enum_annotations(clazz)
 
 
 def examine_stream(stream):
