@@ -59,6 +59,10 @@ public class ApiDoclet {
         ANNOTATIONS.add("android.support.annotation.MainThread");
         ANNOTATIONS.add("android.support.annotation.UiThread");
         ANNOTATIONS.add("android.support.annotation.WorkerThread");
+
+        ANNOTATIONS.add("android.support.annotation.IntDef");
+        ANNOTATIONS.add("android.support.annotation.LongDef");
+        ANNOTATIONS.add("android.support.annotation.StringDef");
     }
 
     /** Doclet API: check that the options provided are valid */
