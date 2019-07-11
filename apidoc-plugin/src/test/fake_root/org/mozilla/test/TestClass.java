@@ -43,6 +43,7 @@ public class TestClass {
         public void testInterfaceMethod() {}
     }
     public static class TestExtends extends TestInterfaceImpl {}
+    public static class TestExtendsImplements extends TestSubclass implements TestInterface, TestInterfaceTwo {}
 
     public static class TestSkippedClass {}
     public static class TestSkippedClass2 {}

@@ -75,6 +75,12 @@
     "test": "test-interface-default-functional",
     "expected": "API_CHANGE"
   },{
+    "test": "test-package-allowed-implements",
+    "expected": "SUCCESS",
+    "check_compat": false,
+    "filter": "GV",
+    "allowed_packages": ["test"]
+  },{
     "test": "test-fields-only-class",
     "expected": "API_ERROR",
     "check_compat": false,
@@ -168,6 +174,20 @@
     "allowed_packages": ["test", "android"]
   },{
     "test": "test-package-unallowed-field-annotation",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-package-unallowed-implements",
+    "expected": "API_ERROR",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV7",
+    "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-package-unallowed-extends-class",
     "expected": "API_ERROR",
     "check_compat": false,
     "filter": "GV",
