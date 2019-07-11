@@ -280,7 +280,7 @@ class Class():
         self.methods = []
         self.source = None
 
-        raw = collect_chunks(raw, "\s")
+        raw = collect_chunks(self.raw, "\s")
         self.split = list(raw)
         self.isEnum = False
         if "class" in raw:
@@ -296,10 +296,15 @@ class Class():
         if "extends" in raw:
             self.extends = Type(self, None, raw[raw.index("extends")+1], line,
                                 blame, imports)
-            self.extends_path = collect_chunks(self.extends.name, ".")
+            self.extends_path = collect_chunks(self.extends.name, "\.")
         else:
             self.extends = None
             self.extends_path = []
+
+        if "implements" in raw:
+            self.implements = [Type(self, None, r, line, blame, imports) for r in raw[raw.index("implements")+1:]]
+        else:
+            self.implements = []
 
         self.annotations = [
             Annotation(self, None, line, a, blame, imports) for a in raw if a.startswith("@")]
@@ -1718,6 +1723,10 @@ def verify_packages(api, allowed_packages):
         if not is_allowed(clazz.fullname, extra_types):
             error(clazz, None, "GV7", "Class %s is not allowed. Allowed packages: %s." %
                 (clazz.typ, ".*, ".join(allowed_packages) + ".*"))
+        if clazz.extends is not None:
+            check_type(None, clazz.extends, extra_types)
+        for i in clazz.implements:
+            check_type(None, i, extra_types)
         for g in clazz.generics:
             check_type(None, g, extra_types)
         for a in clazz.annotations:

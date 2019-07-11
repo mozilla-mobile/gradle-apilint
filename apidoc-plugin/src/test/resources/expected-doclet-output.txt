@@ -97,6 +97,10 @@ package org.mozilla.test {
     ctor public TestExtends();
   }
 
+  public static class TestClass.TestExtendsImplements extends TestClass.TestSubclass implements TestClass.TestInterface TestClass.TestInterfaceTwo {
+    ctor public TestExtendsImplements();
+  }
+
   public static interface TestClass.TestInterface {
     method public void testInterfaceMethod();
   }
