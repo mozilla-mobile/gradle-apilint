@@ -19,11 +19,9 @@ import java.util.List;
 /** Executes a Python script embedded in the resources. */
 public class PythonExec extends Exec {
     /** Path to the script to execute */
-    @Input
     String mScriptPath;
 
     /** Path to the python command used to execute the script */
-    @Input
     String mPythonCommand = "python";
 
     @TaskAction
@@ -48,6 +46,7 @@ public class PythonExec extends Exec {
         mPythonCommand = pythonCommand;
     }
 
+    @Input
     public String getPythonCommand() {
         return mPythonCommand;
     }
@@ -56,6 +55,7 @@ public class PythonExec extends Exec {
         mScriptPath = scriptPath;
     }
 
+    @Input
     public String getScriptPath() {
         return mScriptPath;
     }
