@@ -31,19 +31,22 @@ class ApiLintPlugin implements Plugin<Project> {
             def apiGenerate = project.task("apiGenerate${name}", type: ApiCompatLintTask) {
                 description = "Generates API file for build variant ${name}"
                 doFirst {
-                    classpath = project.files(variant.getJavaCompile().classpath.files)
+                    classpath = variant.javaCompile.classpath
                 }
 
-                source = variant.getJavaCompile().source
+                source = project.android.sourceSets.main.java.srcDirs
                 exclude '**/R.java'
+                include '**/**.java'
+
+                sourcePath = project.android.sourceSets.main.collect({ it.java.srcDirs }).flatten() +
+                        variant.generateBuildConfig.sourceOutputDir +
+                        variant.aidlCompile.sourceOutputDir
 
                 outputFile = apiFile
                 packageFilter = extension.packageFilter
                 skipClassesRegex = extension.skipClassesRegex
                 destinationDir = new File(destinationDir, variant.baseName)
-                sourcePath = variant.sourceSets.collect({ it.javaDirectories }).flatten()
             }
-
             apiGenerate.dependsOn variant.javaCompile
 
             def apiCompatLint = project.task("apiCompatLint${name}", type: PythonExec) {
