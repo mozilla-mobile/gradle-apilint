@@ -34,11 +34,11 @@ class ApiLintPlugin implements Plugin<Project> {
                     classpath = variant.javaCompile.classpath
                 }
 
-                source = project.android.sourceSets.main.java.srcDirs
+                source = variant.sourceSets.collect({ it.java.srcDirs })
                 exclude '**/R.java'
                 include '**/**.java'
 
-                sourcePath = project.android.sourceSets.main.collect({ it.java.srcDirs }).flatten() +
+                sourcePath = variant.sourceSets.collect({ it.java.srcDirs }).flatten() +
                         variant.generateBuildConfig.sourceOutputDir +
                         variant.aidlCompile.sourceOutputDir
 
