@@ -23,8 +23,8 @@ class ApiLintPlugin implements Plugin<Project> {
         // TODO: support applications
         project.android.libraryVariants.all { variant ->
             def name = variant.name.capitalize()
-            def apiFile = project.file(
-                        "${variant.javaCompile.destinationDir}/${extension.apiOutputFileName}")
+            def apiFileName = "${variant.javaCompile.destinationDir}/${extension.apiOutputFileName}"
+            def apiFile = project.file(apiFileName)
 
             def currentApiFile = project.file(extension.currentApiRelativeFilePath)
 
@@ -59,6 +59,8 @@ class ApiLintPlugin implements Plugin<Project> {
                 args '--result-json'
                 args project.file(
                         "${variant.javaCompile.destinationDir}/${extension.jsonResultFileName}")
+                args '--api-map'
+                args project.file(apiFileName + ".map")
             }
 
             apiCompatLint.dependsOn apiGenerate
@@ -67,7 +69,7 @@ class ApiLintPlugin implements Plugin<Project> {
                 description = "Runs API lint checks for variant ${name}"
                 workingDir '.'
                 scriptPath 'apilint.py'
-                args currentApiFile
+                args apiFile
                 args '--result-json'
                 args project.file(
                         "${variant.javaCompile.destinationDir}/${extension.jsonResultFileName}")
@@ -79,6 +81,8 @@ class ApiLintPlugin implements Plugin<Project> {
                     args '--allowed-packages'
                     args extension.allowedPackages
                 }
+                args '--api-map'
+                args project.file(apiFileName + ".map")
             }
 
             apiCompatLint.dependsOn apiLintSingle

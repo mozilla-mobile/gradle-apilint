@@ -26,7 +26,7 @@ $ git blame api/current.txt -t -e > /tmp/currentblame.txt
 $ apilint.py /tmp/currentblame.txt previous.txt --no-color
 """
 
-import re, sys, collections, traceback, argparse, json
+import os, re, sys, collections, traceback, argparse, json
 
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -66,11 +66,11 @@ def ident(raw):
 
 
 class Annotation():
-    def __init__(self, clazz, source, line, raw, blame, imports):
+    def __init__(self, clazz, source, location, raw, blame, imports):
         self.clazz = clazz
-        self.line = line
+        self.location = location
         self.raw = raw[1:]
-        self.typ = Type(clazz, self, raw[1:], line, blame, imports)
+        self.typ = Type(clazz, self, raw[1:], location, blame, imports)
         self.blame = blame
         self.ident = self.typ.name
         self.source = source
@@ -82,9 +82,9 @@ class Annotation():
         return self.raw
 
 class Field():
-    def __init__(self, clazz, line, raw, blame, imports):
+    def __init__(self, clazz, location, raw, blame, imports):
         self.clazz = clazz
-        self.line = line
+        self.location = location
         self.raw = raw.strip(" {;")
         self.blame = blame
         self.source = None
@@ -96,11 +96,11 @@ class Field():
             while r in raw: raw.remove(r)
 
         self.annotations = [
-            Annotation(clazz, self, line, a, blame, imports) for a in raw if a.startswith("@")]
+            Annotation(clazz, self, location, a, blame, imports) for a in raw if a.startswith("@")]
 
         raw = [x for x in raw if not x.startswith("@")]
 
-        self.typ = Type(clazz, self, raw[0], line, blame, imports)
+        self.typ = Type(clazz, self, raw[0], location, blame, imports)
         self.name = raw[1].strip(";")
         if len(raw) >= 4 and raw[2] == "=":
             self.value = raw[3].strip(';"')
@@ -117,14 +117,14 @@ class Field():
 
 
 class Argument():
-    def __init__(self, clazz, source, raw, line, blame, imports):
+    def __init__(self, clazz, source, raw, location, blame, imports):
         raw = collect_chunks(raw, "\s")
         self.annotations = [
-            Annotation(clazz, self, line, a, blame, imports) for a in raw if a.startswith("@")]
+            Annotation(clazz, self, location, a, blame, imports) for a in raw if a.startswith("@")]
         raw = [x for x in raw if not x.startswith("@")]
 
-        self.typ = Type(clazz, source, " ".join(raw), line, blame, imports)
-        self.line = line
+        self.typ = Type(clazz, source, " ".join(raw), location, blame, imports)
+        self.location = location
         self.blame = blame
         self.clazz = clazz
         self.source = source
@@ -168,9 +168,9 @@ class Method():
         arguments = collect_chunks(line[arg_begin+1:arg_end], ",")
         return (raw, arguments)
 
-    def __init__(self, clazz, line, raw, blame, imports):
+    def __init__(self, clazz, location, raw, blame, imports):
         self.clazz = clazz
-        self.line = line
+        self.location = location
         self.raw = raw.strip(" {;")
         self.blame = blame
         self.source = None
@@ -187,18 +187,18 @@ class Method():
             while r in raw: raw.remove(r)
 
         self.annotations = [
-            Annotation(clazz, self, line, a, blame, imports) for a in raw if a.startswith("@")]
+            Annotation(clazz, self, location, a, blame, imports) for a in raw if a.startswith("@")]
 
         raw = [x for x in raw if not x.startswith("@")]
 
         if raw[0].startswith("<"):
-            self.generics = Type(clazz, self, raw[0], line, blame, imports).generics
+            self.generics = Type(clazz, self, raw[0], location, blame, imports).generics
             raw = raw[1:]
         else:
             self.generics = []
 
         typ_name = raw[0] if raw[0] != "ctor" else clazz.fullname
-        self.typ = Type(clazz, self, typ_name, line, blame, imports)
+        self.typ = Type(clazz, self, typ_name, location, blame, imports)
 
         self.name = raw[1]
         self.args = []
@@ -206,7 +206,7 @@ class Method():
 
         #TODO: throws
         for r in arguments:
-            self.args.append(Argument(clazz, self, r, line, blame, imports))
+            self.args.append(Argument(clazz, self, r, location, blame, imports))
 
         self.ident = "method %s %s(%s);" % (self.typ.ident(), self.name,
                                            ", ".join(x.typ.ident() for x in self.args))
@@ -218,8 +218,8 @@ class Method():
         return self.raw
 
 class Type():
-    def __init__(self, clazz, source, raw, line, blame, imports):
-        self.line = line
+    def __init__(self, clazz, source, raw, location, blame, imports):
+        self.location = location
         self.blame = blame
         self.source = source
         self.raw = raw
@@ -227,14 +227,14 @@ class Type():
         raw = collect_chunks(raw, "extends", len("extends"))
         if len(raw) > 1:
             extends = collect_chunks(raw[1], "&")
-            self.extends = [Type(clazz, self, e, line, blame, imports) for e in extends]
+            self.extends = [Type(clazz, self, e, location, blame, imports) for e in extends]
         else:
             self.extends = []
 
         raw = raw[0]
         if "<" in raw:
             generics_string = raw[raw.find("<")+1:raw.rfind(">")]
-            self.generics = [Type(clazz, self, x, line, blame, imports)
+            self.generics = [Type(clazz, self, x, location, blame, imports)
                 for x in collect_chunks(generics_string, ",")]
             raw = raw[:raw.find("<")]
         else:
@@ -269,10 +269,19 @@ class Type():
     def __repr__(self):
         return self.ident()
 
-class Class():
-    def __init__(self, pkg, line, raw, blame, imports):
-        self.pkg = pkg
+class Location():
+    def __init__(self, fileName, line, column):
+        self.fileName = fileName
         self.line = line
+        self.column = column
+
+    def __repr__(self):
+        return os.path.relpath(self.fileName) + ":" + str(self.line) + ":" + str(self.column)
+
+class Class():
+    def __init__(self, pkg, location, raw, blame, imports):
+        self.pkg = pkg
+        self.location = location
         self.raw = raw.strip(" {;")
         self.blame = blame
         self.ctors = []
@@ -294,7 +303,7 @@ class Class():
             raise ValueError("Funky class type %s" % (self.raw))
 
         if "extends" in raw:
-            self.extends = Type(self, None, raw[raw.index("extends")+1], line,
+            self.extends = Type(self, None, raw[raw.index("extends")+1], location,
                                 blame, imports)
             self.extends_path = collect_chunks(self.extends.name, "\.")
         else:
@@ -302,15 +311,15 @@ class Class():
             self.extends_path = []
 
         if "implements" in raw:
-            self.implements = [Type(self, None, r, line, blame, imports) for r in raw[raw.index("implements")+1:]]
+            self.implements = [Type(self, None, r, location, blame, imports) for r in raw[raw.index("implements")+1:]]
         else:
             self.implements = []
 
         self.annotations = [
-            Annotation(self, None, line, a, blame, imports) for a in raw if a.startswith("@")]
+            Annotation(self, None, location, a, blame, imports) for a in raw if a.startswith("@")]
 
         if "<" in self.fullname:
-            self.generics = Type(self, None, self.fullname, line, blame,
+            self.generics = Type(self, None, self.fullname, location, blame,
                                  imports).generics
             self.fullname = re.sub("<.+?>", "", self.fullname)
         else:
@@ -329,8 +338,8 @@ class Class():
 
 
 class Package():
-    def __init__(self, line, raw, blame):
-        self.line = line
+    def __init__(self, location, raw, blame):
+        self.location = location
         self.raw = raw.strip(" {;")
         self.blame = blame
         self.source = None
@@ -343,7 +352,7 @@ class Package():
         return self.raw
 
 
-def _parse_stream(f, clazz_cb=None):
+def _parse_stream(f, api_map, clazz_cb=None):
     line = 0
     api = {}
     pkg = None
@@ -362,26 +371,27 @@ def _parse_stream(f, clazz_cb=None):
         else:
             blame = None
 
+        location = read_map(api_map, line)
         if raw.startswith("import"):
             imp = raw[raw.index("import")+7:-1]
             imports[imp.split(".")[-1]] = imp
         elif raw.startswith("package"):
-            pkg = Package(line, raw, blame)
+            pkg = Package(location, raw, blame)
         elif raw.startswith("  ") and raw.endswith("{"):
             # When provided with class callback, we treat as incremental
             # parse and don't build up entire API
             if clazz and clazz_cb:
                 clazz_cb(clazz)
-            clazz = Class(pkg, line, raw, blame, imports)
+            clazz = Class(pkg, location, raw, blame, imports)
             api[clazz.fullname] = clazz
         elif raw.startswith("    ctor"):
-            clazz.ctors.append(Method(clazz, line, raw, blame, imports))
+            clazz.ctors.append(Method(clazz, location, raw, blame, imports))
         elif raw.startswith("    method"):
-            clazz.methods.append(Method(clazz, line, raw, blame, imports))
+            clazz.methods.append(Method(clazz, location, raw, blame, imports))
         elif raw.startswith("    field"):
-            clazz.fields.append(Field(clazz, line, raw, blame, imports))
+            clazz.fields.append(Field(clazz, location, raw, blame, imports))
         elif raw.startswith("    enum_constant"):
-            clazz.fields.append(Field(clazz, line, raw, blame, imports))
+            clazz.fields.append(Field(clazz, location, raw, blame, imports))
 
     # Handle last trailing class
     if clazz and clazz_cb:
@@ -406,17 +416,17 @@ class Failure():
             self.head = "Warning %s" % (rule) if rule else "Warning"
             dump = "%s%s:%s %s" % (format(fg=YELLOW, bg=BLACK, bold=True), self.head, format(reset=True), msg)
 
-        self.line = clazz.line
+        self.location = clazz.location
         blame = clazz.blame
         if detail is not None:
-            self.line = detail.line
+            self.location = detail.location
             blame = detail.blame
             while detail is not None:
                 dump += "\n    in " + repr(detail)
                 detail = detail.source
         dump += "\n    in " + repr(clazz)
         dump += "\n    in " + repr(clazz.pkg)
-        dump += "\n    at line " + repr(self.line)
+        dump += "\n    at line " + repr(self.location)
         if blame is not None:
             dump += "\n    last modified by %s in %s" % (blame[1], blame[0])
 
@@ -430,10 +440,21 @@ class Failure():
             'rule': self.rule,
             'msg': self.msg,
             'detail': repr(self.detail),
-            'line': repr(self.line),
+            'file': self.location.fileName,
+            'line': int(self.location.line),
+            'column': int(self.location.column),
             'class': repr(self.clazz),
             'pkg': repr(self.clazz.pkg),
         }
+
+def read_map(api_map, lineNumber):
+    if api_map is None:
+        return Location("api.txt", lineNumber, 0)
+    mapString = api_map[lineNumber-1].strip()
+    if not mapString:
+        return Location("api.txt", lineNumber, 0)
+    [fileName,line,column] = mapString.split(":")
+    return Location(fileName, line, column)
 
 failures = {}
 
@@ -459,7 +480,7 @@ noticed = {}
 def notice(clazz):
     global noticed
 
-    noticed[clazz.fullname] = hash(clazz)
+    noticed[clazz.fullname] = clazz
 
 
 def verify_constants(clazz):
@@ -1667,12 +1688,12 @@ def examine_clazz(clazz):
     verify_enum_annotations(clazz)
 
 
-def examine_stream(stream):
+def examine_stream(stream, api_map):
     """Find all style issues in the given API stream."""
     global failures, noticed
     failures = {}
     noticed = {}
-    api = _parse_stream(stream, examine_clazz)
+    api = _parse_stream(stream, api_map, examine_clazz)
     return (failures, noticed, api)
 
 
@@ -1848,13 +1869,20 @@ def show_deprecations_at_birth(cur, prev):
         print("")
 
 
-def dump_result_json(args, compat_fail, api_changes, failures):
+def dump_result_json(args, compat_fail, api_changes, failures, api_map):
     if not 'result_json' in args or not args['result_json']:
         return
 
+    api_changes = [
+        {
+            'file': cur_noticed[x].location.fileName,
+            'column': int(cur_noticed[x].location.column),
+            'line': int(cur_noticed[x].location.line),
+        } for x in api_changes]
+
     result = {
         'compat_failures': [compat_fail[x].json() for x in compat_fail],
-        'api_changes': [x for x in api_changes],
+        'api_changes': api_changes,
         'failures': [failures[x].json() for x in failures],
     }
 
@@ -1890,6 +1918,7 @@ if __name__ == "__main__":
     parser.add_argument("--allowed-packages", nargs='*',
             help="Restrict API to the packages specified in this argument.")
     parser.add_argument("--result-json", help="Put result in JSON file.", type=argparse.FileType('w'))
+    parser.add_argument("--api-map", help="File containing a map from the api.txt file to the source files.", type=argparse.FileType('r'))
     args = vars(parser.parse_args())
 
     if args['no_color']:
@@ -1901,21 +1930,25 @@ if __name__ == "__main__":
     current_file = args['current.txt']
     previous_file = args['previous.txt']
 
+    api_map = None
+    if args['api_map']:
+        api_map = args['api_map'].readlines()
+
     if args['show_deprecations_at_birth']:
         with current_file as f:
-            cur = _parse_stream(f)
+            cur = _parse_stream(f, api_map)
         with previous_file as f:
-            prev = _parse_stream(f)
+            prev = _parse_stream(f, api_map)
         show_deprecations_at_birth(cur, prev)
         sys.exit()
 
     compat_fail = []
 
     with current_file as f:
-        cur_fail, cur_noticed, cur = examine_stream(f)
+        cur_fail, cur_noticed, cur = examine_stream(f, api_map)
     if not previous_file is None:
         with previous_file as f:
-            prev_fail, prev_noticed, prev = examine_stream(f)
+            prev_fail, prev_noticed, prev = examine_stream(f, api_map)
 
         # ignore errors from previous API level
         for p in prev_fail:
@@ -1924,7 +1957,7 @@ if __name__ == "__main__":
 
         # ignore classes unchanged from previous API level
         for k, v in prev_noticed.items():
-            if k in cur_noticed and v == cur_noticed[k]:
+            if k in cur_noticed and hash(v) == hash(cur_noticed[k]):
                 del cur_noticed[k]
 
         # look for compatibility issues
@@ -1942,7 +1975,7 @@ if __name__ == "__main__":
         cur_fail = filtered_fail
 
     dump_result_json(args, compat_fail,
-        cur_noticed if args['show_noticed'] else [], cur_fail)
+        cur_noticed if args['show_noticed'] else [], cur_fail, api_map)
 
     if compat_fail and len(compat_fail) != 0:
         print("%s API compatibility issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))

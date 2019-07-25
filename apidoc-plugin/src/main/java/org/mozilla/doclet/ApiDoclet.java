@@ -36,6 +36,7 @@ import com.sun.javadoc.Parameter;
 import com.sun.javadoc.ParameterizedType;
 import com.sun.javadoc.ProgramElementDoc;
 import com.sun.javadoc.RootDoc;
+import com.sun.javadoc.SourcePosition;
 import com.sun.javadoc.Type;
 import com.sun.javadoc.TypeVariable;
 
@@ -83,7 +84,8 @@ public class ApiDoclet {
 
         try {
             final Writer writer = new WriterImpl(
-                        new BufferedWriter(new FileWriter(options.outputFileName)));
+                        new BufferedWriter(new FileWriter(options.outputFileName)),
+                        new BufferedWriter(new FileWriter(options.outputFileName + ".map")));
 
             return writeApi(root, writer, options);
         } catch (IOException e) {
@@ -163,7 +165,7 @@ public class ApiDoclet {
     }
 
     private void writePackage(PackageDoc packageDoc, Writer writer) {
-        writer.line("package " + packageDoc.name() + " {");
+        writer.line("package " + packageDoc.name() + " {", packageDoc.position());
         writer.newLine();
 
         sorted(packageDoc.allClasses()).forEach(
@@ -275,8 +277,9 @@ public class ApiDoclet {
             return;
         }
 
-        writer.line(toLine(classDoc, writer));
+        writer.line(toLine(classDoc, writer), classDoc.position());
 
+        Writer indented = writer.indent();
         Stream.<Stream<? extends ProgramElementDoc>> of(
                 sorted(classDoc.constructors()),
                 sorted(classDoc.methods())
@@ -284,8 +287,7 @@ public class ApiDoclet {
                         .filter(m -> findSuperMethod(m, writer) == null),
                 sorted(classDoc.enumConstants()),
                 sorted(classDoc.fields()))
-            .flatMap(s -> s.map(p -> toLine(p, writer)))
-            .forEach(writer.indent()::line);
+            .forEach(s -> s.forEach(p -> indented.line(toLine(p, writer), p.position())));
 
         writer.line("}");
         writer.newLine();
@@ -478,32 +480,40 @@ public class ApiDoclet {
         Writer indent();
         void newLine();
         void line(String text);
+        void line(String text, SourcePosition position);
         void close();
         String import_(String path);
     }
 
     private static class WriterImpl implements Writer {
         private final BufferedWriter mWriter;
+        private final BufferedWriter mSourceMapWriter;
         private final int mIndentation;
         private final StringBuilder mStringBuilder;
+        private final StringBuilder mSourceMap;
         private final Map<String, String> mImports;
 
         private static final String INDENTATION = "  ";
 
-        public WriterImpl(BufferedWriter writer) {
-            this(writer, 0, new StringBuilder(), new HashMap<>());
+        public WriterImpl(BufferedWriter writer, BufferedWriter sourceMapWriter) {
+            this(writer, sourceMapWriter, 0, new StringBuilder(), new HashMap<>(),
+                    new StringBuilder());
         }
 
-        private WriterImpl(BufferedWriter writer, int indentation, StringBuilder stringBuilder,
-                           Map<String, String> imports) {
+        private WriterImpl(BufferedWriter writer, BufferedWriter sourceMapWriter, int indentation,
+                           StringBuilder stringBuilder, Map<String, String> imports,
+                           StringBuilder sourceMap) {
             mWriter = writer;
+            mSourceMapWriter = sourceMapWriter;
             mIndentation = indentation;
             mStringBuilder = stringBuilder;
             mImports = imports;
+            mSourceMap = sourceMap;
         }
 
         public Writer indent() {
-            return new WriterImpl(mWriter, mIndentation + 1, mStringBuilder, mImports);
+            return new WriterImpl(mWriter, mSourceMapWriter, mIndentation + 1, mStringBuilder,
+                    mImports, mSourceMap);
         }
 
         public String import_(String path) {
@@ -532,6 +542,8 @@ public class ApiDoclet {
         }
 
         public void close() {
+            // Number of lines in the header, that don't have a source map
+            int headerSize = 0;
             try {
                 List<String> imports = new ArrayList<>(mImports.values());
                 Collections.sort(imports);
@@ -540,32 +552,51 @@ public class ApiDoclet {
                     mWriter.write("import ");
                     mWriter.write(imported);
                     mWriter.write(";\n");
+                    headerSize++;
                 }
 
                 if (mImports.values().size() > 0) {
                     mWriter.write("\n");
+                    headerSize++;
                 }
 
                 mWriter.write(mStringBuilder.toString());
                 mWriter.close();
+
+                for (int i = 0; i < headerSize; i++) {
+                    mSourceMapWriter.write("\n");
+                }
+
+                mSourceMapWriter.write(mSourceMap.toString());
+                mSourceMapWriter.close();
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
         }
 
         public void newLine() {
-            line("", 0);
+            line("", 0, "");
         }
 
         public void line(String text) {
-            line(text, mIndentation);
+            line(text, mIndentation, "");
         }
 
-        private void line(String text, int indent) {
+        public void line(String text, SourcePosition source) {
+            String sourceString = "";
+            if (source != null) {
+                sourceString = source.file().toString() + ":" + source.line()
+                        + ":" + source.column();
+            }
+            line(text, mIndentation, sourceString);
+        }
+
+        private void line(String text, int indent, String source) {
             for (int i = 0; i < indent; i++) {
                 mStringBuilder.append(INDENTATION);
             }
             mStringBuilder.append(text + "\n");
+            mSourceMap.append(source + "\n");
         }
     }
 }
