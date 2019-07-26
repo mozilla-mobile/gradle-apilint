@@ -240,12 +240,18 @@ class Type():
         else:
             self.generics = []
 
+        self.is_array = False
+        self.is_var_arg = False
         if raw.endswith("[]"):
-            self.name = self.resolve(raw[:-2], imports)
+            while raw.endswith("[]"):
+                raw = raw[:-2]
+            self.name = self.resolve(raw, imports)
             self.is_array = True
+        elif raw.endswith("..."):
+            self.name = self.resolve(raw[:-3], imports)
+            self.is_var_arg = True
         else:
             self.name = self.resolve(raw, imports)
-            self.is_array = False
 
     def resolve(self, name, imports):
         # Never resolve primitive types

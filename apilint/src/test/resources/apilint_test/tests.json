@@ -81,6 +81,12 @@
     "filter": "GV",
     "allowed_packages": ["test"]
   },{
+    "test": "test-built-in-types-allowed",
+    "expected": "SUCCESS",
+    "check_compat": false,
+    "filter": "GV7",
+    "allowed_packages": ["test"]
+  },{
     "test": "test-fields-only-class",
     "expected": "API_ERROR",
     "check_compat": false,
