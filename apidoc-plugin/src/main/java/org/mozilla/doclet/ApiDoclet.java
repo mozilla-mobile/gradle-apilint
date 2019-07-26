@@ -246,7 +246,7 @@ public class ApiDoclet {
 
         classLine += classDoc.name();
 
-        String typeParams = typeParamsFragment(classDoc.typeParameters());
+        String typeParams = typeParamsFragment(classDoc.typeParameters(), writer);
         classLine += typeParams;
 
         if (typeParams.equals("")) {
@@ -378,9 +378,19 @@ public class ApiDoclet {
         return " = " + field.constantValueExpression();
     }
 
-    private String typeParamsFragment(TypeVariable[] typeVariables) {
+    private String typeParamFragment(TypeVariable typeVariable, Writer writer) {
+        String fragment = typeVariable.typeName();
+        if (typeVariable.bounds().length > 0) {
+            fragment += " extends " + Stream.of(typeVariable.bounds())
+                    .map(t -> typeFragment(t, writer))
+                    .collect(Collectors.joining(" & "));
+        }
+        return fragment;
+    }
+
+    private String typeParamsFragment(TypeVariable[] typeVariables, Writer writer) {
         String parameters = Stream.of(typeVariables)
-                .map(TypeVariable::toString)
+                .map(tv -> typeParamFragment(tv, writer))
                 .collect(Collectors.joining(","));
 
         if (parameters.equals("")) {
@@ -390,8 +400,8 @@ public class ApiDoclet {
         return "<" + parameters + "> ";
     }
 
-    private String typeParamsFragment(ExecutableMemberDoc executable) {
-        return typeParamsFragment(executable.typeParameters());
+    private String typeParamsFragment(ExecutableMemberDoc executable, Writer writer) {
+        return typeParamsFragment(executable.typeParameters(), writer);
     }
 
     static class MethodWalker implements Walker<MethodDoc> {
@@ -454,7 +464,7 @@ public class ApiDoclet {
         }
 
         if (member instanceof ExecutableMemberDoc) {
-            line += typeParamsFragment((ExecutableMemberDoc) member);
+            line += typeParamsFragment((ExecutableMemberDoc) member, writer);
         }
 
         if (member instanceof MethodDoc) {

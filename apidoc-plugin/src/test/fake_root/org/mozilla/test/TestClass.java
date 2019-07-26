@@ -131,6 +131,7 @@ public class TestClass {
     public <T> void testTypeVariableUnbounded(T arg) {}
     public <T extends java.lang.Runnable> void testTypeVariableWithBounds(T arg) {}
     public <T extends java.lang.Runnable & java.lang.Cloneable> void testTypeVariableWithMultipleBounds(T arg) {}
+    public <T extends java.util.Map<Integer, Long>> void testTypeVariableWithMapBounds(T arg) {}
 
     public <T> T testReturnTypeUnbounded() { return null; }
     public <T extends java.lang.Runnable> T testReturnTypeWithBound() { return null; }
