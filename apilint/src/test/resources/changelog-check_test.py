@@ -2,15 +2,22 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import json
 import os
-import unittest
 import subprocess as sp
+import tempfile
+import unittest
 
 FOLDER = 'src/test/resources/changelog-check-test'
 
 MISSING_VERSION_CODE = 11
 OUT_OF_DATE_CODE = 10
 OK_CODE = 0
+
+ERROR_CODE_MAP = {
+    MISSING_VERSION_CODE: "missing_api_version",
+    OUT_OF_DATE_CODE: "wrong_api_version",
+}
 
 class ChangelogCheckTest(unittest.TestCase):
     def t(self, changelog, api, expected):
@@ -20,6 +27,20 @@ class ChangelogCheckTest(unittest.TestCase):
         with open(os.devnull, 'w') as devnull:
             code = sp.call(test, stdout=devnull)
         self.assertEqual(code, expected)
+
+        json_file = tempfile.NamedTemporaryFile()
+        test.extend(["--result-json", json_file.name])
+        with open(os.devnull, 'w') as devnull:
+            sp.call(test, stdout=devnull)
+
+        json_file.seek(0)
+        result = json.load(json_file)
+
+        if expected == OK_CODE:
+            self.assertEqual(len(result['failures']), 0)
+        else:
+            self.assertEqual(len(result['failures']), 1)
+            self.assertEqual(result['failures'][0]['rule'], ERROR_CODE_MAP[expected])
 
     def test_changelogWithRightVersionNoError(self):
         self.t("changelog-with-right-version.md", "api-changelog.txt", OK_CODE)

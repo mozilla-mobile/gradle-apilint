@@ -103,6 +103,9 @@ class ApiLintPlugin implements Plugin<Project> {
                     args apiFile
                     args '--changelog-file'
                     args project.file(extension.changelogFileName)
+                    args '--result-json'
+                    args project.file(
+                            "${variant.javaCompile.destinationDir}/${extension.jsonResultFileName}")
                 }
 
                 apiChangelogCheck.dependsOn apiGenerate
