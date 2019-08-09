@@ -23,7 +23,7 @@ class ApiLintPlugin implements Plugin<Project> {
         // TODO: support applications
         project.android.libraryVariants.all { variant ->
             def name = variant.name.capitalize()
-            def apiFileName = "${variant.javaCompile.destinationDir}/${extension.apiOutputFileName}"
+            def apiFileName = "${variant.javaCompileProvider.get().destinationDir}/${extension.apiOutputFileName}"
             def apiFile = project.file(apiFileName)
 
             def currentApiFile = project.file(extension.currentApiRelativeFilePath)
@@ -31,7 +31,7 @@ class ApiLintPlugin implements Plugin<Project> {
             def apiGenerate = project.task("apiGenerate${name}", type: ApiCompatLintTask) {
                 description = "Generates API file for build variant ${name}"
                 doFirst {
-                    classpath = variant.javaCompile.classpath
+                    classpath = variant.javaCompileProvider.get().classpath
                 }
 
                 source = variant.sourceSets.collect({ it.java.srcDirs })
@@ -39,15 +39,15 @@ class ApiLintPlugin implements Plugin<Project> {
                 include '**/**.java'
 
                 sourcePath = variant.sourceSets.collect({ it.java.srcDirs }).flatten() +
-                        variant.generateBuildConfig.sourceOutputDir +
-                        variant.aidlCompile.sourceOutputDir
+                        variant.generateBuildConfigProvider.get().sourceOutputDir +
+                        variant.aidlCompileProvider.get().sourceOutputDir
 
                 outputFile = apiFile
                 packageFilter = extension.packageFilter
                 skipClassesRegex = extension.skipClassesRegex
                 destinationDir = new File(destinationDir, variant.baseName)
             }
-            apiGenerate.dependsOn variant.javaCompile
+            apiGenerate.dependsOn variant.javaCompileProvider.get()
 
             def apiCompatLint = project.task("apiCompatLint${name}", type: PythonExec) {
                 description = "Runs API compatibility lint checks for variant ${name}"
@@ -58,7 +58,7 @@ class ApiLintPlugin implements Plugin<Project> {
                 args currentApiFile
                 args '--result-json'
                 args project.file(
-                        "${variant.javaCompile.destinationDir}/${extension.jsonResultFileName}")
+                        "${variant.javaCompileProvider.get().destinationDir}/${extension.jsonResultFileName}")
                 args '--api-map'
                 args project.file(apiFileName + ".map")
             }
@@ -72,7 +72,7 @@ class ApiLintPlugin implements Plugin<Project> {
                 args apiFile
                 args '--result-json'
                 args project.file(
-                        "${variant.javaCompile.destinationDir}/${extension.jsonResultFileName}")
+                        "${variant.javaCompileProvider.get().destinationDir}/${extension.jsonResultFileName}")
                 if (extension.lintFilters != null) {
                     args '--filter-errors'
                     args extension.lintFilters
@@ -105,7 +105,7 @@ class ApiLintPlugin implements Plugin<Project> {
                     args project.file(extension.changelogFileName)
                     args '--result-json'
                     args project.file(
-                            "${variant.javaCompile.destinationDir}/${extension.jsonResultFileName}")
+                            "${variant.javaCompileProvider.get().destinationDir}/${extension.jsonResultFileName}")
                 }
 
                 apiChangelogCheck.dependsOn apiGenerate
