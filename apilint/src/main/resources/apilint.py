@@ -454,7 +454,7 @@ class Failure():
         }
 
 def read_map(api_map, lineNumber):
-    if api_map is None:
+    if api_map is None or (lineNumber - 1) not in api_map:
         return Location("api.txt", lineNumber, 0)
     mapString = api_map[lineNumber-1].strip()
     if not mapString:
