@@ -40,13 +40,13 @@ def readResultsJson(jsonFile):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Checks that the changelog file has been updated.")
-    parser.add_argument("--api-file", type=argparse.FileType('rb'), help="Updated API file.")
-    parser.add_argument("--changelog-file", type=argparse.FileType('r'), help="Changelog file of the API.")
-    parser.add_argument("--result-json", type=argparse.FileType('r+'), help="Dump results in this file.")
+    parser.add_argument("--api-file", type=argparse.FileType('r', encoding='UTF-8'), help="Updated API file.")
+    parser.add_argument("--changelog-file", type=argparse.FileType('r', encoding='UTF-8'), help="Changelog file of the API.")
+    parser.add_argument("--result-json", type=argparse.FileType('r+', encoding='UTF-8'), help="Dump results in this file.")
     args = parser.parse_args()
 
     sha1 = hashlib.sha1()
-    sha1.update(args.api_file.read())
+    sha1.update(args.api_file.read().encode('UTF-8'))
 
     currentApiVersion = sha1.hexdigest()
     results = readResultsJson(args.result_json)

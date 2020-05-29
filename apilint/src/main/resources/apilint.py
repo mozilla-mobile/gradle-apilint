@@ -1907,8 +1907,8 @@ def matches_filter(filter_, failure):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Enforces common Android public API design \
             patterns. It ignores lint messages from a previous API level, if provided.")
-    parser.add_argument("current.txt", type=argparse.FileType('r'), help="current.txt")
-    parser.add_argument("previous.txt", nargs='?', type=argparse.FileType('r'), default=None,
+    parser.add_argument("current.txt", type=argparse.FileType('r', encoding='UTF-8'), help="current.txt")
+    parser.add_argument("previous.txt", nargs='?', type=argparse.FileType('r', encoding='UTF-8'), default=None,
             help="previous.txt")
     parser.add_argument("--no-color", action='store_const', const=True,
             help="Disable terminal colors")
@@ -1923,7 +1923,7 @@ if __name__ == "__main__":
             "select only error codes that starts with the codes specified.")
     parser.add_argument("--allowed-packages", nargs='*',
             help="Restrict API to the packages specified in this argument.")
-    parser.add_argument("--result-json", help="Put result in JSON file.", type=argparse.FileType('w'))
+    parser.add_argument("--result-json", help="Put result in JSON file.", type=argparse.FileType('w', encoding='UTF-8'))
     parser.add_argument("--api-map", help="File containing a map from the api.txt file to the source files.", type=argparse.FileType('r'))
     args = vars(parser.parse_args())
 
