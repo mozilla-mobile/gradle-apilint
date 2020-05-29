@@ -28,7 +28,7 @@ class ChangelogCheckTest(unittest.TestCase):
             code = sp.call(test, stdout=devnull)
         self.assertEqual(code, expected)
 
-        json_file = tempfile.NamedTemporaryFile()
+        json_file = tempfile.NamedTemporaryFile(mode='w+', encoding='UTF-8')
         test.extend(["--result-json", json_file.name])
         with open(os.devnull, 'w') as devnull:
             sp.call(test, stdout=devnull)
