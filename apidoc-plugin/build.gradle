@@ -43,7 +43,7 @@ switch (JavaVersion.current()) {
 
 task testApiDoclet(type: Exec) {
     workingDir '.'
-    commandLine 'python', file('src/test/resources/apidoc_test.py'),
+    commandLine 'python3', file('src/test/resources/apidoc_test.py'),
         '--javadoc', javadocExecutable,
         '--doclet-jar', "${buildDir}/libs/apidoc-plugin-${Config.API_DOC_VERSION}.jar",
         '--java-root', file('src/test/fake_root'),

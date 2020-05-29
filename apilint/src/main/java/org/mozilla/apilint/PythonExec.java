@@ -22,7 +22,7 @@ public class PythonExec extends Exec {
     String mScriptPath;
 
     /** Path to the python command used to execute the script */
-    String mPythonCommand = "python";
+    String mPythonCommand = "python3";
 
     @TaskAction
     public void exec() {
