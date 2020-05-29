@@ -21,7 +21,7 @@ ERROR_CODE_MAP = {
 
 class ChangelogCheckTest(unittest.TestCase):
     def t(self, changelog, api, expected):
-        test = ["python", "src/main/resources/changelog-check.py",
+        test = ["python3", "src/main/resources/changelog-check.py",
                 "--changelog-file", "{}/{}".format(FOLDER, changelog),
                 "--api-file", "{}/{}".format(FOLDER, api)]
         with open(os.devnull, 'w') as devnull:

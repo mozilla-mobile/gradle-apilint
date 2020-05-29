@@ -41,7 +41,7 @@ for t in tests:
                  after_api, "--label", "after.txt"])
 
     json_file = "{}/{}-result.json".format(args.build_dir, t["test"])
-    test = ["python", "src/main/resources/apilint.py",
+    test = ["python3", "src/main/resources/apilint.py",
             "--result-json", json_file,
             after_api]
 
