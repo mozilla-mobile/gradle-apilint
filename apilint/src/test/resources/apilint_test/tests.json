@@ -242,6 +242,13 @@
     "filter": "GV",
     "allowed_packages": ["java", "android", "test", "org.mozilla.geckoview"]
   },{
+    "test": "test-annotation-arguments-androidx",
+    "expected": "SUCCESS",
+    "check_compat": false,
+    "filter": "GV",
+    "allowed_packages": ["java", "androidx", "test", "org.mozilla.geckoview"]
+  },
+  {
     "test": "test-nullable-const-field",
     "expected": "SUCCESS",
     "check_compat": false,
