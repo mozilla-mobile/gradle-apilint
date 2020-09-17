@@ -705,6 +705,11 @@ def verify_threading_annotations(clazz):
         "android.support.annotation.WorkerThread",
         "android.support.annotation.BinderThread",
         "android.support.annotation.AnyThread",
+        "androidx.annotation.MainThread",
+        "androidx.annotation.UiThread",
+        "androidx.annotation.WorkerThread",
+        "androidx.annotation.BinderThread",
+        "androidx.annotation.AnyThread",
     ]
 
     # If the annotation is on the class than it applies to every method
@@ -727,6 +732,8 @@ def verify_nullability_annotations(clazz):
     NULLABILITY_ANNOTATIONS = [
         "android.support.annotation.NonNull",
         "android.support.annotation.Nullable",
+        "androidx.annotation.NonNull",
+        "androidx.annotation.Nullable",
     ]
 
     if clazz.isEnum:
@@ -1616,7 +1623,10 @@ def verify_enum_annotations(clazz):
     ENUM_ANNOTATIONS = [
         "android.support.annotation.IntDef",
         "android.support.annotation.LongDef",
-        "android.support.annotation.StringDef"
+        "android.support.annotation.StringDef",
+        "androidx.annotation.IntDef",
+        "androidx.annotation.LongDef",
+        "androidx.annotation.StringDef"
     ]
 
     for a in clazz.annotations:

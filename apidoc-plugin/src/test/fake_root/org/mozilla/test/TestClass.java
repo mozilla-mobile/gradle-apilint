@@ -6,6 +6,7 @@ package org.mozilla.test;
 
 import java.util.List;
 import android.support.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** Test class used in ApiDocletTest */
 public class TestClass {
@@ -56,6 +57,8 @@ public class TestClass {
         public void methodToOverride() {}
 
         public void methodToOverrideWithArgAnnotation(@NonNull String arg) {}
+
+        public void methodToOverrideWithArgAnnotation2(@Nullable String arg) {}
     }
 
     public static class TestAnnotationChildShouldHaveAnnotation extends TestAnnotationBase {

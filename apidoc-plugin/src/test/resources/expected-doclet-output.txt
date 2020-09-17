@@ -1,4 +1,5 @@
 import android.support.annotation.NonNull;
+import androidx.annotation.Nullable;
 import java.lang.Class;
 import java.lang.Cloneable;
 import java.lang.Deprecated;
@@ -79,6 +80,7 @@ package org.mozilla.test {
   @Deprecated public static class TestClass.TestAnnotationBase {
     method @Deprecated public void methodToOverride();
     method public void methodToOverrideWithArgAnnotation(@NonNull String);
+    method public void methodToOverrideWithArgAnnotation2(@Nullable String);
   }
 
   @Deprecated public static class TestClass.TestAnnotationChildDuplicateAnnotation extends TestClass.TestAnnotationBase {
