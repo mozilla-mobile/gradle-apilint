@@ -34,6 +34,8 @@ BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 ALLOW_GOOGLE = False
 USE_COLOR = True
 
+DEPRECATION_SCHEDULE_ANNOTATION = None
+
 PRIMITIVE_TYPES = ["boolean", "byte", "char", "short", "int", "long", "float",
                    "double"]
 
@@ -66,14 +68,41 @@ def ident(raw):
 
 
 class Annotation():
+    def parse_line(self, line):
+        line = line.strip()
+        arg_begin = line.find('(')
+        arg_end = line.find(')')
+
+        if arg_begin == -1 or arg_end == -1:
+            return (line, [])
+
+        raw = line[:arg_begin]
+        arguments = collect_chunks(line[arg_begin+1:arg_end], ",")
+        return (raw, arguments)
+
+    def parse_value(self, value):
+        # Remove surrounding quotes
+        if value.startswith('"'):
+            return value[1:-1]
+        return value
+
+    def parse_arguments(self, arguments):
+        parsed = {}
+        for argument in arguments:
+            equal_sign = argument.find('=')
+            parsed[argument[:equal_sign]] = self.parse_value(argument[equal_sign+1:])
+        return parsed
+
     def __init__(self, clazz, source, location, raw, blame, imports):
+        self.raw = raw[1:]
+        (raw, arguments) = self.parse_line(raw)
         self.clazz = clazz
         self.location = location
-        self.raw = raw[1:]
         self.typ = Type(clazz, self, raw[1:], location, blame, imports)
         self.blame = blame
-        self.ident = self.typ.name
         self.source = source
+        self.arguments = self.parse_arguments(arguments)
+        self.ident = self.typ.name + str(self.arguments)
 
     def __hash__(self):
         return hash(self.raw)
@@ -141,32 +170,36 @@ def collect_chunks(line, separator, separator_len=1):
         chunks.append(chunk.strip())
     return chunks
 
-# Finds the next chunk in line, considers everything between
-# '<' and '>' to be part of the same chunk, so e.g.
-# "TestClass<A extends B>" is considered one chunk
+# Finds the next chunk in line, considers everything between '<' and '>', '('
+# and ')' to be part of the same chunk, so e.g.  "TestClass<A extends B>" or
+# "function(int a)" is considered one chunk
 def find_next_chunk(unparsed, separator, separator_len=1):
-    balance = 0
+    caret = 0
+    parens = 0
     for i in range(1, len(unparsed) + 1):
         if unparsed[i-1] == '<':
-            balance += 1
+            caret += 1
         elif unparsed[i-1] == '>':
-            balance -= 1
+            caret -= 1
+        elif unparsed[i-1] == '(':
+            parens += 1
+        elif unparsed[i-1] == ')':
+            parens -= 1
         elif (i >= separator_len and
                 re.match(separator, unparsed[i-separator_len:i]) and
-                balance == 0):
+                caret == 0 and parens == 0):
             return (unparsed[0:i-separator_len], unparsed[i:].strip())
     # only one chunk
     return (unparsed, "")
 
 class Method():
-    def parse_line(self, line):
-        line = line.strip()
+    def arguments(self, raw):
+        line = " ".join(raw)
         arg_begin = line.find('(')
         arg_end = line.find(')')
 
-        raw = collect_chunks(line[:arg_begin], "\s")
         arguments = collect_chunks(line[arg_begin+1:arg_end], ",")
-        return (raw, arguments)
+        return arguments
 
     def __init__(self, clazz, location, raw, blame, imports):
         self.clazz = clazz
@@ -175,7 +208,8 @@ class Method():
         self.blame = blame
         self.source = None
 
-        (raw, arguments) = self.parse_line(raw)
+        raw = collect_chunks(raw, "\s")
+
         for r in ["", ";"]:
             while r in raw: raw.remove(r)
         self.split = list(raw)
@@ -205,8 +239,9 @@ class Method():
         self.throws = []
 
         #TODO: throws
-        for r in arguments:
+        for r in self.arguments(raw):
             self.args.append(Argument(clazz, self, r, location, blame, imports))
+
 
         self.ident = "method %s %s(%s);" % (self.typ.ident(), self.name,
                                            ", ".join(x.typ.ident() for x in self.args))
@@ -1634,6 +1669,41 @@ def verify_enum_annotations(clazz):
         if a.typ.name in ENUM_ANNOTATIONS:
             error(clazz, a, "GV8", "@IntDef, @LongDef, @StringDef should not appear in the API, make the @interface package private.")
 
+def verify_deprecated_annotations(clazz):
+    if DEPRECATION_SCHEDULE_ANNOTATION is None:
+        # --deprecation-annotation not specified, nothing to check
+        return
+
+    DEPRECATED_ANNOTATION = "java.lang.Deprecated"
+
+    def is_deprecated(subject):
+        for a in subject.annotations:
+            if a.typ.name == DEPRECATED_ANNOTATION:
+                return True
+        return False
+
+    def check_deprecated_annotation(subject):
+        if not is_deprecated(subject):
+            return True
+        for a in subject.annotations:
+            if a.typ.name == DEPRECATION_SCHEDULE_ANNOTATION:
+                return True
+        return False
+
+    def check_member(member):
+        if not check_deprecated_annotation(member):
+            error(clazz, member if clazz != member else None,
+                "GV9", "Missing deprecation schedule "
+                "annotation. Needs @" + DEPRECATION_SCHEDULE_ANNOTATION)
+
+    check_member(clazz)
+    for f in clazz.methods:
+        check_member(f)
+    for f in clazz.ctors:
+        check_member(f)
+    for f in clazz.fields:
+        check_member(f)
+
 
 def examine_clazz(clazz):
     """Find all style issues in the given class."""
@@ -1703,6 +1773,7 @@ def examine_clazz(clazz):
     verify_nullability_annotations(clazz)
     verify_default_impl(clazz)
     verify_enum_annotations(clazz)
+    verify_deprecated_annotations(clazz)
 
 
 def examine_stream(stream, api_map):
@@ -1934,12 +2005,17 @@ if __name__ == "__main__":
             "select only error codes that starts with the codes specified.")
     parser.add_argument("--allowed-packages", nargs='*',
             help="Restrict API to the packages specified in this argument.")
+    parser.add_argument("--deprecation-annotation", nargs='?',
+            help="Additional annotation that needs to be present with a deprecated member.")
     parser.add_argument("--result-json", help="Put result in JSON file.", type=argparse.FileType('w', encoding='UTF-8'))
     parser.add_argument("--api-map", help="File containing a map from the api.txt file to the source files.", type=argparse.FileType('r'))
     args = vars(parser.parse_args())
 
     if args['no_color']:
         USE_COLOR = False
+
+    if args['deprecation_annotation']:
+        DEPRECATION_SCHEDULE_ANNOTATION = args['deprecation_annotation']
 
     if args['allow_google']:
         ALLOW_GOOGLE = True

@@ -48,37 +48,6 @@ public class ApiDoclet {
     private static final String OPTION_DIRECTORY = "-d";
     private static final String OPTION_SKIP_CLASS_REGEX = "-skip-class-regex";
 
-    private static final Set<String> ANNOTATIONS = new HashSet<>();
-    static {
-        ANNOTATIONS.add("java.lang.Deprecated");
-
-        ANNOTATIONS.add("android.support.annotation.NonNull");
-        ANNOTATIONS.add("android.support.annotation.Nullable");
-
-        ANNOTATIONS.add("android.support.annotation.AnyThread");
-        ANNOTATIONS.add("android.support.annotation.BinderThread");
-        ANNOTATIONS.add("android.support.annotation.MainThread");
-        ANNOTATIONS.add("android.support.annotation.UiThread");
-        ANNOTATIONS.add("android.support.annotation.WorkerThread");
-
-        ANNOTATIONS.add("android.support.annotation.IntDef");
-        ANNOTATIONS.add("android.support.annotation.LongDef");
-        ANNOTATIONS.add("android.support.annotation.StringDef");
-
-        ANNOTATIONS.add("androidx.annotation.NonNull");
-        ANNOTATIONS.add("androidx.annotation.Nullable");
-
-        ANNOTATIONS.add("androidx.annotation.AnyThread");
-        ANNOTATIONS.add("androidx.annotation.BinderThread");
-        ANNOTATIONS.add("androidx.annotation.MainThread");
-        ANNOTATIONS.add("androidx.annotation.UiThread");
-        ANNOTATIONS.add("androidx.annotation.WorkerThread");
-
-        ANNOTATIONS.add("androidx.annotation.IntDef");
-        ANNOTATIONS.add("androidx.annotation.LongDef");
-        ANNOTATIONS.add("androidx.annotation.StringDef");
-    }
-
     /** Doclet API: check that the options provided are valid */
     public static boolean validOptions(String options[][],
                                        DocErrorReporter reporter) {
@@ -188,9 +157,20 @@ public class ApiDoclet {
         writer.newLine();
     }
 
+    private static Stream<AnnotationDesc> sorted(AnnotationDesc[] items) {
+        return Stream.of(items).sorted(ANNOTATION_DESC_COMPARATOR);
+    }
+
     private static <T extends Doc> Stream<T> sorted(T[] items) {
         return Stream.of(items).sorted(DOC_COMPARATOR);
     }
+
+    private static final Comparator<AnnotationDesc> ANNOTATION_DESC_COMPARATOR = new Comparator<AnnotationDesc>() {
+        @Override
+        public int compare(AnnotationDesc o1, AnnotationDesc o2) {
+            return DOC_COMPARATOR.compare(o1.annotationType(), o2.annotationType());
+        }
+    };
 
     private static final Comparator<Doc> DOC_COMPARATOR = new Comparator<Doc>() {
         @Override
@@ -273,7 +253,7 @@ public class ApiDoclet {
             classLine += "extends " + typeFragment(classDoc.superclass(), writer) + " ";
         }
 
-        if (classDoc.interfaces().length > 0) {
+        if (classDoc.interfaces().length > 0 && !classDoc.isAnnotationType()) {
             classLine += "implements " + sorted(classDoc.interfaces())
                 .map(t -> typeFragment(t, writer))
                 .collect(Collectors.joining(" "));
@@ -282,6 +262,14 @@ public class ApiDoclet {
 
         classLine += "{";
         return classLine;
+    }
+
+    private ProgramElementDoc[] elements(ClassDoc classDoc) {
+        if (classDoc instanceof AnnotationTypeDoc) {
+            return ((AnnotationTypeDoc) classDoc).elements();
+        }
+
+        return new ProgramElementDoc[0];
     }
 
     private void writeClass(ClassDoc classDoc, Writer writer) {
@@ -298,6 +286,7 @@ public class ApiDoclet {
                 sorted(classDoc.methods())
                         // Don't add @Override methods to the API
                         .filter(m -> findSuperMethod(m, writer) == null),
+                sorted(elements(classDoc)),
                 sorted(classDoc.enumConstants()),
                 sorted(classDoc.fields()))
             .forEach(s -> s.forEach(p -> indented.line(toLine(p, writer), p.position())));
@@ -306,15 +295,34 @@ public class ApiDoclet {
         writer.newLine();
     }
 
+    private boolean isDocumented(AnnotationDesc annotation) {
+        return Stream.of(annotation.annotationType().annotations())
+            .anyMatch(a -> "java.lang.annotation.Documented".equals(a.annotationType().toString()));
+    }
+
     private Stream<String> from(Stream<AnnotationDesc> annotations, Writer writer) {
-        return annotations.map(AnnotationDesc::annotationType)
-                    .map(AnnotationTypeDoc::toString)
-                    .filter(ANNOTATIONS::contains)
-                    .map(s -> "@" + writer.import_(s));
+        return annotations
+                    .filter(this::isDocumented)
+                    .map(s -> annotation(s, writer));
+    }
+
+    private String annotationValues(AnnotationDesc.ElementValuePair[] valuePairs) {
+        String fragment = Stream.of(valuePairs)
+            .map(p -> p.element().name() + "=" + p.value().toString())
+            .collect(Collectors.joining(","));
+        if (fragment.equals("")) {
+            return "";
+        }
+        return "(" + fragment + ")";
+    }
+
+    private String annotation(AnnotationDesc annotation, Writer writer) {
+        return "@" + writer.import_(annotation.annotationType().toString())
+            + annotationValues(annotation.elementValues());
     }
 
     private String annotationFragment(ProgramElementDoc member, Writer writer) {
-        return annotationFragment(Stream.of(member.annotations()), writer);
+        return annotationFragment(sorted(member.annotations()), writer);
     }
 
     private String annotationFragment(Stream<AnnotationDesc> annotations, Writer writer) {
@@ -336,6 +344,8 @@ public class ApiDoclet {
             return "field";
         } else if (member.isEnumConstant()) {
             return "enum_constant";
+        } else if (member.isAnnotationTypeElement()) {
+            return "element";
         } else {
             throw new IllegalArgumentException("Unexpected member.");
         }
@@ -365,7 +375,7 @@ public class ApiDoclet {
     }
 
     private String paramFragment(Parameter parameter, Writer writer) {
-        return annotationFragment(Stream.of(parameter.annotations()), writer)
+        return annotationFragment(sorted(parameter.annotations()), writer)
                 + typeFragment(parameter.type(), writer);
     }
 
@@ -466,7 +476,7 @@ public class ApiDoclet {
     private String toLine(ProgramElementDoc member, Writer writer) {
         String line = tag(member) + " ";
 
-        line += annotationFragment(Stream.of(member.annotations()), writer);
+        line += annotationFragment(sorted(member.annotations()), writer);
 
         if (member instanceof MethodDoc) {
             line += ((MethodDoc) member).isDefault() ? "default " : "";

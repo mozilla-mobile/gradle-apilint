@@ -12,4 +12,5 @@ class ApiLintPluginExtension {
     String changelogFileName
     List<String> lintFilters
     List<String> allowedPackages
+    String deprecationAnnotation
 }

@@ -19,6 +19,14 @@ public class TestClass {
     public final static List<String> TEST_COMPOSITE_TYPE = null;
     public final static List<List<String>> TEST_NESTED_COMPOSITE_TYPE = null;
 
+    public @A @B @C int testSorting1;
+    public @B @A @C int testSorting2;
+    public @C @B @A int testSorting3;
+
+    public void testAnnotationSorting1(@A @B @C int test);
+    public void testAnnotationSorting2(@B @A @C int test);
+    public void testAnnotationSorting3(@C @B @A int test);
+
     protected int testProtectedField;
     int testPackageProtectedField;
 
@@ -50,6 +58,7 @@ public class TestClass {
     public static class TestSkippedClass2 {}
 
     @Deprecated
+    @DeprecationSchedule(id="test-deprecation", version=2)
     public static class TestAnnotationBase {
         private TestAnnotationBase() {}
 

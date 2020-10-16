@@ -7,13 +7,33 @@ import java.lang.Integer;
 import java.lang.Long;
 import java.lang.Runnable;
 import java.lang.String;
-import java.lang.annotation.Annotation;
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.util.List;
 import java.util.Map;
+import org.mozilla.test.A;
+import org.mozilla.test.B;
+import org.mozilla.test.C;
+import org.mozilla.test.DeprecationSchedule;
 import org.mozilla.test.TestClass;
 import org.mozilla.test.testsorta.TestSort;
 
 package org.mozilla.test {
+
+  @Documented public interface A {
+  }
+
+  @Documented public interface B {
+  }
+
+  @Documented public interface C {
+  }
+
+  @Documented @Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME) @Target(value={java.lang.annotation.ElementType.CONSTRUCTOR, java.lang.annotation.ElementType.FIELD, java.lang.annotation.ElementType.LOCAL_VARIABLE, java.lang.annotation.ElementType.METHOD, java.lang.annotation.ElementType.PACKAGE, java.lang.annotation.ElementType.PARAMETER, java.lang.annotation.ElementType.TYPE}) public interface DeprecationSchedule {
+    element public String id();
+    element public int version();
+  }
 
   public class TestClass {
     ctor public TestClass();
@@ -23,6 +43,9 @@ package org.mozilla.test {
     ctor public TestClass(int, float);
     ctor protected TestClass(boolean);
     method @Deprecated public void testAnnotation();
+    method public void testAnnotationSorting1(@A @B @C int);
+    method public void testAnnotationSorting2(@A @B @C int);
+    method public void testAnnotationSorting3(@A @B @C int);
     method public void testArrayArg(int[]);
     method public <T> void testCompositeParam(List<T>);
     method public final void testFinal();
@@ -59,6 +82,9 @@ package org.mozilla.test {
     field public String testFieldWithoutValue;
     field public final String testFinalField = "finalValue";
     field public static final String testFinalStaticField = "finalStaticValue";
+    field @A @B @C public int testSorting1;
+    field @A @B @C public int testSorting2;
+    field @A @B @C public int testSorting3;
     field protected int testProtectedField;
   }
 
@@ -74,19 +100,19 @@ package org.mozilla.test {
     ctor public TestAbstractClass();
   }
 
-  public static interface TestClass.TestAnnotation implements Annotation {
+  public static interface TestClass.TestAnnotation {
   }
 
-  @Deprecated public static class TestClass.TestAnnotationBase {
+  @Deprecated @DeprecationSchedule(id="test-deprecation",version=2) public static class TestClass.TestAnnotationBase {
     method @Deprecated public void methodToOverride();
     method public void methodToOverrideWithArgAnnotation(@NonNull String);
     method public void methodToOverrideWithArgAnnotation2(@Nullable String);
   }
 
-  @Deprecated public static class TestClass.TestAnnotationChildDuplicateAnnotation extends TestClass.TestAnnotationBase {
+  @Deprecated @DeprecationSchedule(id="test-deprecation",version=2) public static class TestClass.TestAnnotationChildDuplicateAnnotation extends TestClass.TestAnnotationBase {
   }
 
-  @Deprecated public static class TestClass.TestAnnotationChildShouldHaveAnnotation extends TestClass.TestAnnotationBase {
+  @Deprecated @DeprecationSchedule(id="test-deprecation",version=2) public static class TestClass.TestAnnotationChildShouldHaveAnnotation extends TestClass.TestAnnotationBase {
     method public void methodToOverride(int);
   }
 
