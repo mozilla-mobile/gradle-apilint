@@ -54,6 +54,9 @@ for t in tests:
     if "allowed_packages" in t:
         test += ["--allowed-packages"] + t["allowed_packages"]
 
+    if "deprecation-annotation" in t:
+        test += ["--deprecation-annotation", t["deprecation-annotation"]]
+
     if check_compat:
         test += ["--show-noticed"]
 

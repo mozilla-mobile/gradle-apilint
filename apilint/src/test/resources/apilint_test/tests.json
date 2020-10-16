@@ -42,6 +42,9 @@
     "test": "test-annotation-remove",
     "expected": "INCOMPATIBLE"
   },{
+    "test": "test-annotation-change-value",
+    "expected": "INCOMPATIBLE"
+  },{
     "test": "test-annotation-remove-ctor",
     "expected": "INCOMPATIBLE"
   },{
@@ -213,6 +216,21 @@
     "filter": "GV",
     "rule": "GV8",
     "allowed_packages": ["test", "android"]
+  },{
+    "test": "test-deprecated-method",
+    "expected": "API_ERROR",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV9",
+    "allowed_packages": ["test", "java", "android"]
+  },{
+    "test": "test-deprecated-method-present",
+    "expected": "SUCCESS",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "check_compat": false,
+    "filter": "GV",
+    "allowed_packages": ["test", "java", "android"]
   },{
     "test": "test-nullable-method-with-annotations",
     "expected": "SUCCESS",
