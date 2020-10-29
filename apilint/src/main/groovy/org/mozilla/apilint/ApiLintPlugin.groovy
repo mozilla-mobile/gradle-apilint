@@ -85,6 +85,10 @@ class ApiLintPlugin implements Plugin<Project> {
                     args '--deprecation-annotation'
                     args extension.deprecationAnnotation
                 }
+                if (extension.libraryVersion != null) {
+                    args '--library-version'
+                    args extension.libraryVersion
+                }
                 args '--api-map'
                 args project.file(apiFileName + ".map")
             }
