@@ -57,6 +57,9 @@ for t in tests:
     if "deprecation-annotation" in t:
         test += ["--deprecation-annotation", t["deprecation-annotation"]]
 
+    if "library-version" in t:
+        test += ["--library-version", str(t["library-version"])]
+
     if check_compat:
         test += ["--show-noticed"]
 

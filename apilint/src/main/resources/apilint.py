@@ -35,6 +35,7 @@ ALLOW_GOOGLE = False
 USE_COLOR = True
 
 DEPRECATION_SCHEDULE_ANNOTATION = None
+LIBRARY_VERSION = None
 
 PRIMITIVE_TYPES = ["boolean", "byte", "char", "short", "int", "long", "float",
                    "double"]
@@ -1682,19 +1683,33 @@ def verify_deprecated_annotations(clazz):
                 return True
         return False
 
-    def check_deprecated_annotation(subject):
-        if not is_deprecated(subject):
-            return True
+    def get_deprecated_annotation(subject):
         for a in subject.annotations:
             if a.typ.name == DEPRECATION_SCHEDULE_ANNOTATION:
-                return True
-        return False
+                return a
+        return None
 
     def check_member(member):
-        if not check_deprecated_annotation(member):
+        if not is_deprecated(member):
+            return
+        annotation = get_deprecated_annotation(member)
+        if annotation is None:
             error(clazz, member if clazz != member else None,
                 "GV9", "Missing deprecation schedule "
                 "annotation. Needs @" + DEPRECATION_SCHEDULE_ANNOTATION)
+            return
+        if LIBRARY_VERSION is None:
+            # No version specified, nothing to check
+            return
+        version = int(annotation.arguments['version'])
+        if version == LIBRARY_VERSION:
+          warn(clazz, member if clazz != member else None,
+              "GV11", "Deprecated method should be removed in this version")
+        if version < LIBRARY_VERSION:
+          error(clazz, member if clazz != member else None,
+              "GV10", "Deprecated method should be removed. Expected removal version: "
+                  + str(version) + " < current version: " + str(LIBRARY_VERSION))
+
 
     check_member(clazz)
     for f in clazz.methods:
@@ -2007,6 +2022,8 @@ if __name__ == "__main__":
             help="Restrict API to the packages specified in this argument.")
     parser.add_argument("--deprecation-annotation", nargs='?',
             help="Additional annotation that needs to be present with a deprecated member.")
+    parser.add_argument("--library-version", nargs='?',
+            help="Integer representing the current library version")
     parser.add_argument("--result-json", help="Put result in JSON file.", type=argparse.FileType('w', encoding='UTF-8'))
     parser.add_argument("--api-map", help="File containing a map from the api.txt file to the source files.", type=argparse.FileType('r'))
     args = vars(parser.parse_args())
@@ -2016,6 +2033,9 @@ if __name__ == "__main__":
 
     if args['deprecation_annotation']:
         DEPRECATION_SCHEDULE_ANNOTATION = args['deprecation_annotation']
+
+    if args['library_version']:
+        LIBRARY_VERSION = int(args['library_version'])
 
     if args['allow_google']:
         ALLOW_GOOGLE = True

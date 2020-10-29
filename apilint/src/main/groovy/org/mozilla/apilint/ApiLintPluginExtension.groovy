@@ -13,4 +13,5 @@ class ApiLintPluginExtension {
     List<String> lintFilters
     List<String> allowedPackages
     String deprecationAnnotation
+    Integer libraryVersion
 }

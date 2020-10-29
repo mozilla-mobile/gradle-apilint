@@ -109,6 +109,7 @@ apiLint {
     lintFilters = null
     allowedPackages = null
     deprecationAnnotation = null
+    libraryVersion = null
 }
 ```
 
@@ -153,6 +154,10 @@ public @interface DeprecationSchedule {
 ```
 
 where `version` indicates when the deprecated method is expected to be removed.
+
+<code><b>libraryVersion</b><code> Integer that represents the current library
+version, used by `deprecationAnnotation` to determine if a deprecated member
+should be removed.
 
 ## License
 

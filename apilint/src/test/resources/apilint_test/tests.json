@@ -225,9 +225,37 @@
     "rule": "GV9",
     "allowed_packages": ["test", "java", "android"]
   },{
+    "test": "test-deprecated-method",
+    "expected": "API_ERROR",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "library-version": 65,
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV9",
+    "allowed_packages": ["test", "java", "android"]
+  },{
+    "test": "test-deprecated-method-present",
+    "expected": "API_ERROR",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "check_compat": false,
+    "library-version": 65,
+    "filter": "GV",
+    "rule": "GV10",
+    "allowed_packages": ["test", "java", "android"]
+  },{
+    "test": "test-deprecated-method-present",
+    "expected": "API_WARNING",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "library-version": 64,
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV11",
+    "allowed_packages": ["test", "java", "android"]
+  },{
     "test": "test-deprecated-method-present",
     "expected": "SUCCESS",
     "deprecation-annotation": "test.DeprecationSchedule",
+    "library-version": 63,
     "check_compat": false,
     "filter": "GV",
     "allowed_packages": ["test", "java", "android"]
