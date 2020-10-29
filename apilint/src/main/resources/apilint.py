@@ -445,6 +445,7 @@ class Failure():
         return {
             'rule': self.rule,
             'msg': self.msg,
+            'error': self.error,
             'detail': repr(self.detail),
             'file': self.location.fileName,
             'line': int(self.location.line),
@@ -1904,7 +1905,7 @@ def dump_result_json(args, compat_fail, api_changes, failures, api_map):
 
     result['failure'] = ((compat_fail is not None and len(compat_fail) != 0)
             or (api_changes is not None and len(api_changes) != 0)
-            or (failures is not None and len(failures) != 0))
+            or (failures is not None and any(failures[x].error for x in failures)))
 
     json.dump(result, args['result_json'])
 
@@ -1993,6 +1994,8 @@ if __name__ == "__main__":
     dump_result_json(args, compat_fail,
         cur_noticed if args['show_noticed'] else [], cur_fail, api_map)
 
+    has_error = any(cur_fail[x].error for x in cur_fail)
+
     if compat_fail and len(compat_fail) != 0:
         print("%s API compatibility issues %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
         failures = []
@@ -2006,7 +2009,10 @@ if __name__ == "__main__":
         for f in sorted(cur_fail):
             print(cur_fail[f])
             print("")
-        sys.exit(77)
+        if has_error:
+          sys.exit(77)
+        else:
+          sys.exit(0)
 
     if args['show_noticed'] and len(cur_noticed) != 0:
         print("%s API changes noticed %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))

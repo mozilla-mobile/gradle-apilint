@@ -13,6 +13,7 @@ TEST_DIR = "src/test/resources/apilint_test/"
 ERROR_CODES = {
     'SUCCESS': 0,
     'API_CHANGE': 10,
+    'API_WARNING': 0,
     'API_ERROR': 77,
     'INCOMPATIBLE': 131,
 }
@@ -74,7 +75,7 @@ for t in tests:
          print(" ".join(test))
          sys.exit(1)
 
-    if t['expected'] != 'API_ERROR':
+    if t['expected'] != 'API_ERROR' and t['expected'] != 'API_WARNING':
         assert len(json_result['failures']) == 0
 
     if t['expected'] == 'INCOMPATIBLE':
@@ -89,6 +90,13 @@ for t in tests:
         assert len(json_result['failures']) > 0
         assert json_result['failure'] == True
         assert json_result['failures'][0]['rule'] == t['rule']
+        assert json_result['failures'][0]['error'] == True
+
+    if t['expected'] == 'API_WARNING':
+        assert len(json_result['failures']) > 0
+        assert json_result['failure'] == False
+        assert json_result['failures'][0]['rule'] == t['rule']
+        assert json_result['failures'][0]['error'] == False
 
     if t['expected'] == 'SUCCESS':
         assert len(json_result['api_changes']) == 0
