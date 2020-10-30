@@ -215,6 +215,9 @@
     "check_compat": false,
     "filter": "GV",
     "rule": "GV8",
+    "file": "api.txt",
+    "line": 4,
+    "column": 0,
     "allowed_packages": ["test", "android"]
   },{
     "test": "test-deprecated-method",
@@ -223,6 +226,9 @@
     "check_compat": false,
     "filter": "GV",
     "rule": "GV9",
+    "file": "test-map-location",
+    "line": 123,
+    "column": 45,
     "allowed_packages": ["test", "java", "android"]
   },{
     "test": "test-deprecated-method",
@@ -250,6 +256,9 @@
     "check_compat": false,
     "filter": "GV",
     "rule": "GV11",
+    "file": "test-correct-map",
+    "line": 54,
+    "column": 0,
     "allowed_packages": ["test", "java", "android"]
   },{
     "test": "test-deprecated-method-present",

@@ -48,7 +48,8 @@ task testApiDoclet(type: Exec) {
         '--doclet-jar', "${buildDir}/libs/apidoc-plugin-${Config.API_DOC_VERSION}.jar",
         '--java-root', file('src/test/fake_root'),
         '--out-dir', "${buildDir}/tmp",
-        '--expected', file('src/test/resources/expected-doclet-output.txt')
+        '--expected', file('src/test/resources/expected-doclet-output.txt'),
+        '--expected-map', file('src/test/resources/expected-map-output.txt')
 }
 
 testApiDoclet.dependsOn jar
