@@ -42,6 +42,7 @@ class ApiLintPlugin implements Plugin<Project> {
                         variant.generateBuildConfigProvider.get().sourceOutputDir +
                         variant.aidlCompileProvider.get().sourceOutputDir
 
+                rootDir = project.rootDir
                 outputFile = apiFile
                 packageFilter = extension.packageFilter
                 skipClassesRegex = extension.skipClassesRegex

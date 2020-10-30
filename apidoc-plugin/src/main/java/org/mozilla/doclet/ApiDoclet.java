@@ -47,12 +47,13 @@ public class ApiDoclet {
     private static final String OPTION_WINDOWTITLE = "-windowtitle";
     private static final String OPTION_DIRECTORY = "-d";
     private static final String OPTION_SKIP_CLASS_REGEX = "-skip-class-regex";
+    private static final String OPTION_ROOT_DIR = "-root-dir";
 
     /** Doclet API: check that the options provided are valid */
     public static boolean validOptions(String options[][],
                                        DocErrorReporter reporter) {
         if (!parseOptions(options).isPresent()) {
-            reporter.printError("Usage: javadoc -output api.txt ...");
+            reporter.printError("Usage: javadoc -output api.txt -root-dir /path/to/source ...");
         }
 
         return parseOptions(options).isPresent();
@@ -67,7 +68,8 @@ public class ApiDoclet {
         try {
             final Writer writer = new WriterImpl(
                         new BufferedWriter(new FileWriter(options.outputFileName)),
-                        new BufferedWriter(new FileWriter(options.outputFileName + ".map")));
+                        new BufferedWriter(new FileWriter(options.outputFileName + ".map")),
+                        options.rootDir + "/");
 
             return writeApi(root, writer, options);
         } catch (IOException e) {
@@ -102,6 +104,7 @@ public class ApiDoclet {
         case OPTION_DOCTITLE:
         case OPTION_WINDOWTITLE:
         case OPTION_SKIP_CLASS_REGEX:
+        case OPTION_ROOT_DIR:
             return 2;
         default:
             return 0;
@@ -116,17 +119,20 @@ public class ApiDoclet {
     private static class Options {
         final String outputFileName;
         final List<Pattern> skipClasses;
+        final String rootDir;
 
-        public Options(String outputFileName, List<String> skipClassesRegex) {
+        public Options(String outputFileName, List<String> skipClassesRegex, String rootDir) {
             this.outputFileName = outputFileName;
             this.skipClasses = skipClassesRegex.stream()
                     .map(Pattern::compile)
                     .collect(Collectors.toList());
+            this.rootDir = rootDir;
         }
     }
 
     private static Optional<Options> parseOptions(String options[][]) {
         Optional<String> outputFileName = Optional.empty();
+        Optional<String> rootDir = Optional.empty();
         List<String> skipClasses = new ArrayList<>();
 
         for (int i = 0; i < options.length; i++) {
@@ -138,12 +144,22 @@ public class ApiDoclet {
                 case OPTION_SKIP_CLASS_REGEX:
                     skipClasses.add(option[1]);
                     break;
+                case OPTION_ROOT_DIR:
+                    rootDir = Optional.of(option[1]);
                 default:
                     // ignore
             }
         }
 
-        return outputFileName.map(output -> new Options(output, skipClasses));
+        if (!outputFileName.isPresent() || !rootDir.isPresent()) {
+          return Optional.empty();
+        }
+
+        return Optional.of(
+            new Options(
+                outputFileName.get(),
+                skipClasses,
+                rootDir.get()));
     }
 
     private void writePackage(PackageDoc packageDoc, Writer writer) {
@@ -525,28 +541,30 @@ public class ApiDoclet {
         private final StringBuilder mStringBuilder;
         private final StringBuilder mSourceMap;
         private final Map<String, String> mImports;
+        private final String mRootDir;
 
         private static final String INDENTATION = "  ";
 
-        public WriterImpl(BufferedWriter writer, BufferedWriter sourceMapWriter) {
+        public WriterImpl(BufferedWriter writer, BufferedWriter sourceMapWriter, String rootDir) {
             this(writer, sourceMapWriter, 0, new StringBuilder(), new HashMap<>(),
-                    new StringBuilder());
+                    new StringBuilder(), rootDir);
         }
 
         private WriterImpl(BufferedWriter writer, BufferedWriter sourceMapWriter, int indentation,
                            StringBuilder stringBuilder, Map<String, String> imports,
-                           StringBuilder sourceMap) {
+                           StringBuilder sourceMap, String rootDir) {
             mWriter = writer;
             mSourceMapWriter = sourceMapWriter;
             mIndentation = indentation;
             mStringBuilder = stringBuilder;
             mImports = imports;
             mSourceMap = sourceMap;
+            mRootDir = rootDir;
         }
 
         public Writer indent() {
             return new WriterImpl(mWriter, mSourceMapWriter, mIndentation + 1, mStringBuilder,
-                    mImports, mSourceMap);
+                    mImports, mSourceMap, mRootDir);
         }
 
         public String import_(String path) {
@@ -615,13 +633,20 @@ public class ApiDoclet {
             line(text, mIndentation, "");
         }
 
-        public void line(String text, SourcePosition source) {
-            String sourceString = "";
-            if (source != null) {
-                sourceString = source.file().toString() + ":" + source.line()
-                        + ":" + source.column();
+        public String sourceInfo(SourcePosition source) {
+            if (source == null) {
+                return "";
             }
-            line(text, mIndentation, sourceString);
+
+            final String relativePath = source.file().toString()
+                .replace(mRootDir, "");
+
+            return relativePath + ":" + source.line()
+                    + ":" + source.column();
+        }
+
+        public void line(String text, SourcePosition source) {
+            line(text, mIndentation, sourceInfo(source));
         }
 
         private void line(String text, int indent, String source) {
