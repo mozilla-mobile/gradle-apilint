@@ -15,6 +15,7 @@ parser.add_argument("--doclet-jar")
 parser.add_argument("--java-root")
 parser.add_argument("--out-dir")
 parser.add_argument("--expected")
+parser.add_argument("--expected-map")
 args = parser.parse_args()
 
 output = args.out_dir + "/api.txt"
@@ -34,8 +35,12 @@ result = sp.call(["diff", '-U5',
     '--label', 'Expected', args.expected,
     '--label', 'Actual', output])
 
+result_map = sp.call(["diff", '-U5',
+    '--label', 'Expected', args.expected_map,
+    '--label', 'Actual', output + ".map"])
+
 # result == 0 from `diff` means that the files are identical
-if result != 0:
+if result != 0 or result_map != 0:
     print("")
     print("ERROR: Doclet output differs from expected.")
     sys.exit(1)

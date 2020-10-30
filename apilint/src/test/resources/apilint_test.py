@@ -60,6 +60,10 @@ for t in tests:
     if "library-version" in t:
         test += ["--library-version", str(t["library-version"])]
 
+    api_map_file = after_api + ".map"
+    if os.path.isfile(api_map_file):
+        test += ["--api-map", after_api + ".map"]
+
     if check_compat:
         test += ["--show-noticed"]
 
@@ -91,6 +95,13 @@ for t in tests:
 
     if t['expected'] == 'API_CHANGE':
         assert len(json_result['api_changes']) > 0
+
+    if 'file' in t:
+        assert json_result['failures'][0]['file'] == t['file']
+    if 'line' in t:
+        assert json_result['failures'][0]['line'] == t['line']
+    if 'column' in t:
+        assert json_result['failures'][0]['column'] == t['column']
 
     if t['expected'] == 'API_ERROR':
         assert len(json_result['failures']) > 0
