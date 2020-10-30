@@ -60,6 +60,7 @@ class ApiLintPlugin implements Plugin<Project> {
                 args '--result-json'
                 args project.file(
                         "${variant.javaCompileProvider.get().destinationDir}/${extension.jsonResultFileName}")
+                args '--append-json'
                 args '--api-map'
                 args project.file(apiFileName + ".map")
             }

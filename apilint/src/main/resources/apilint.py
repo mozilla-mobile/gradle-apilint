@@ -1972,9 +1972,29 @@ def show_deprecations_at_birth(cur, prev):
         print("")
 
 
+def readResultsJson(jsonFile):
+    results = {}
+    jsonString = jsonFile.read()
+    if len(jsonString) > 0:
+        results = json.loads(jsonString)
+
+    return results
+
 def dump_result_json(args, compat_fail, api_changes, failures, api_map):
     if not 'result_json' in args or not args['result_json']:
         return
+
+    if args['append_json']:
+      results = readResultsJson(args['result_json'])
+    else:
+      results = {}
+
+    if 'failures' not in results:
+        results['failures'] = []
+    if 'compat_failures' not in results:
+        results['compat_failures'] = []
+    if 'api_changes' not in results:
+        results['api_changes'] = []
 
     api_changes = [
         {
@@ -1983,17 +2003,17 @@ def dump_result_json(args, compat_fail, api_changes, failures, api_map):
             'line': int(cur_noticed[x].location.line),
         } for x in api_changes]
 
-    result = {
-        'compat_failures': [compat_fail[x].json() for x in compat_fail],
-        'api_changes': api_changes,
-        'failures': [failures[x].json() for x in failures],
-    }
+    results['compat_failures'] += [compat_fail[x].json() for x in compat_fail]
+    results['api_changes'] += api_changes
+    results['failures'] += [failures[x].json() for x in failures]
 
-    result['failure'] = ((compat_fail is not None and len(compat_fail) != 0)
-            or (api_changes is not None and len(api_changes) != 0)
-            or (failures is not None and any(failures[x].error for x in failures)))
+    results['failure'] = ((len(results['compat_failures']) != 0)
+            or (len(results['api_changes']) != 0)
+            or (any(f['error'] for f in results['failures'])))
 
-    json.dump(result, args['result_json'])
+    args['result_json'].seek(0)
+    args['result_json'].truncate(0)
+    json.dump(results, args['result_json'])
 
 def matches_filter(filter_, failure):
     for f in filter_:
@@ -2024,7 +2044,8 @@ if __name__ == "__main__":
             help="Additional annotation that needs to be present with a deprecated member.")
     parser.add_argument("--library-version", nargs='?',
             help="Integer representing the current library version")
-    parser.add_argument("--result-json", help="Put result in JSON file.", type=argparse.FileType('w', encoding='UTF-8'))
+    parser.add_argument("--result-json", help="Put result in JSON file.", type=argparse.FileType('a+', encoding='UTF-8'))
+    parser.add_argument("--append-json", help="Append results to the JSON file instead of truncating it.", action='store_const', const=True)
     parser.add_argument("--api-map", help="File containing a map from the api.txt file to the source files.", type=argparse.FileType('r'))
     args = vars(parser.parse_args())
 
