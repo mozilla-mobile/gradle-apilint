@@ -2007,6 +2007,9 @@ def dump_result_json(args, compat_fail, api_changes, failures, api_map):
     results['api_changes'] += api_changes
     results['failures'] += [failures[x].json() for x in failures]
 
+    # Make sure ordering is consistent (helps with tests)
+    results['failures'].sort(key=lambda f: f['rule'])
+
     results['failure'] = ((len(results['compat_failures']) != 0)
             or (len(results['api_changes']) != 0)
             or (any(f['error'] for f in results['failures'])))
