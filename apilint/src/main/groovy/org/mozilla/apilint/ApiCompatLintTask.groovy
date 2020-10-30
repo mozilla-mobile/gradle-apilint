@@ -21,6 +21,9 @@ class ApiCompatLintTask extends Javadoc {
     @Input
     List<String> skipClassesRegex
 
+    @Input
+    String rootDir
+
     @InputFiles
     List<File> sourcePath
 
@@ -48,6 +51,7 @@ class ApiCompatLintTask extends Javadoc {
         options.addStringOption('output', outputFile.absolutePath)
         options.addStringOption('subpackages', packageFilter)
         options.addStringOption('sourcepath', sourcePath.join(':'))
+        options.addStringOption('root-dir', rootDir)
 
         skipClassesRegex.each{ className ->
                 options.addStringOption('skip-class-regex', className)
