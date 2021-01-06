@@ -41,6 +41,7 @@ class ChangelogCheckTest(unittest.TestCase):
         else:
             self.assertEqual(len(result['failures']), 1)
             self.assertEqual(result['failures'][0]['rule'], ERROR_CODE_MAP[expected])
+            self.assertEqual(result['failures'][0]['error'], True)
 
     def test_changelogWithRightVersionNoError(self):
         self.t("changelog-with-right-version.md", "api-changelog.txt", OK_CODE)
