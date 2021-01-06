@@ -60,7 +60,8 @@ if __name__ == "__main__":
                 "file": args.changelog_file.name,
                 "line": info["line"],
                 "msg": info["message"],
-                "rule": info["rule"]
+                "rule": info["rule"],
+                "error": True
             })
         args.result_json.seek(0)
         args.result_json.truncate(0)
