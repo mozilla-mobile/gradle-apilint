@@ -815,7 +815,7 @@ def verify_default_impl(clazz):
         return
 
     for f in clazz.methods:
-        if "default" not in f.split:
+        if "default" not in f.split and "static" not in f.split:
             error(clazz, f, "GV6", "All interface methods should have a default "
                 "implementation for backwards compatibility")
 
