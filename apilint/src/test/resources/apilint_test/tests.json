@@ -302,8 +302,13 @@
     "check_compat": false,
     "filter": "GV",
     "allowed_packages": ["java", "androidx", "test", "org.mozilla.geckoview"]
-  },
-  {
+  },{
+    "test": "test-interface-default-ok",
+    "expected": "SUCCESS",
+    "check_compat": false,
+    "filter": "GV",
+    "allowed_packages": ["java", "android", "test"]
+  },{
     "test": "test-nullable-const-field",
     "expected": "SUCCESS",
     "check_compat": false,
