@@ -63,6 +63,14 @@ class ApiLintPlugin implements Plugin<Project> {
                 args '--append-json'
                 args '--api-map'
                 args project.file(apiFileName + ".map")
+                if (extension.deprecationAnnotation != null) {
+                    args '--deprecation-annotation'
+                    args extension.deprecationAnnotation
+                }
+                if (extension.libraryVersion != null) {
+                    args '--library-version'
+                    args extension.libraryVersion
+                }
             }
 
             apiCompatLint.dependsOn apiGenerate

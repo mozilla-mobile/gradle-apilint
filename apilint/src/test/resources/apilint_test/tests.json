@@ -12,6 +12,24 @@
     "test": "test-removed-param",
     "expected": "INCOMPATIBLE"
   },{
+    "test": "test-removed-field-deprecated",
+    "expected": "INCOMPATIBLE",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "library-version": 91,
+    "allowed_packages": ["test", "java"]
+  },{
+    "test": "test-removed-method-deprecated",
+    "expected": "INCOMPATIBLE",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "library-version": 91,
+    "allowed_packages": ["test", "java"]
+  },{
+    "test": "test-removed-class-deprecated",
+    "expected": "INCOMPATIBLE",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "library-version": 91,
+    "allowed_packages": ["test", "java"]
+  },{
     "test": "test-changed-return-type",
     "expected": "INCOMPATIBLE"
   },{
@@ -77,6 +95,24 @@
   },{
     "test": "test-interface-default-functional",
     "expected": "API_CHANGE"
+  },{
+    "test": "test-removed-field-deprecated",
+    "expected": "API_CHANGE",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "library-version": 92,
+    "allowed_packages": ["test", "java"]
+  },{
+    "test": "test-removed-method-deprecated",
+    "expected": "API_CHANGE",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "library-version": 92,
+    "allowed_packages": ["test", "java"]
+  },{
+    "test": "test-removed-class-deprecated",
+    "expected": "API_CHANGE",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "library-version": 92,
+    "allowed_packages": ["test", "java"]
   },{
     "test": "test-package-allowed-implements",
     "expected": "SUCCESS",
