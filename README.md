@@ -142,7 +142,7 @@ API. If this list is set, apilint will check that every type mentioned in the
 API belongs to any of the packages listed. Adding a package implicitly allows
 all sub-packages too, so allowing package `a.b` will allow `a.b.c` too.
 
-<code><b>deprecationAnnotation</b><code> Additional annotation that should be
+<code><b>deprecationAnnotation</b></code> Additional annotation that should be
 present when a method is marked with `@Deprecated`. This annotation is expected
 to have a `String id` and a `int version` parameter, like so:
 
@@ -155,7 +155,7 @@ public @interface DeprecationSchedule {
 
 where `version` indicates when the deprecated method is expected to be removed.
 
-<code><b>libraryVersion</b><code> Integer that represents the current library
+<code><b>libraryVersion</b></code> Integer that represents the current library
 version, used by `deprecationAnnotation` to determine if a deprecated member
 should be removed.
 
