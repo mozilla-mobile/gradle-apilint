@@ -1670,6 +1670,12 @@ def verify_enum_annotations(clazz):
         if a.typ.name in ENUM_ANNOTATIONS:
             error(clazz, a, "GV8", "@IntDef, @LongDef, @StringDef should not appear in the API, make the @interface package private.")
 
+def get_deprecated_annotation(subject):
+    for a in subject.annotations:
+        if a.typ.name == DEPRECATION_SCHEDULE_ANNOTATION:
+            return a
+    return None
+
 def verify_deprecated_annotations(clazz):
     if DEPRECATION_SCHEDULE_ANNOTATION is None:
         # --deprecation-annotation not specified, nothing to check
@@ -1682,12 +1688,6 @@ def verify_deprecated_annotations(clazz):
             if a.typ.name == DEPRECATED_ANNOTATION:
                 return True
         return False
-
-    def get_deprecated_annotation(subject):
-        for a in subject.annotations:
-            if a.typ.name == DEPRECATION_SCHEDULE_ANNOTATION:
-                return a
-        return None
 
     def check_member(member):
         if not is_deprecated(member):
@@ -1898,11 +1898,19 @@ def verify_compat(cur, prev):
             if a.ident == test.ident: return True
         return False
 
+    def deprecated_version_matches(test):
+        annotation = get_deprecated_annotation(test)
+        if annotation is None:
+            return False
+        return int(annotation.arguments['version']) == LIBRARY_VERSION
+
     failures = {}
     for key in sorted(prev.keys()):
         prev_clazz = prev[key]
 
         if not class_exists(cur, prev_clazz):
+            if deprecated_version_matches(prev_clazz):
+                continue
             error(prev_clazz, None, None, "Class removed or incompatible change")
             continue
 
@@ -1915,6 +1923,8 @@ def verify_compat(cur, prev):
         for test in prev_clazz.ctors:
             cur_ctor = find_ctor(cur, cur_clazz, test)
             if not cur_ctor:
+                if deprecated_version_matches(test):
+                    break
                 error(prev_clazz, test, None, "Constructor removed or incompatible change")
                 break
             for prev_annotation in test.annotations:
@@ -1925,6 +1935,8 @@ def verify_compat(cur, prev):
         for test in methods:
             cur_method = find_method(cur, cur_clazz, test)
             if not cur_method:
+                if deprecated_version_matches(test):
+                    break
                 error(prev_clazz, test, None, "Method removed or incompatible change")
                 break
             for prev_annotation in test.annotations:
@@ -1933,6 +1945,8 @@ def verify_compat(cur, prev):
 
         for test in prev_clazz.fields:
             if not field_exists(cur, cur_clazz, test):
+                if deprecated_version_matches(test):
+                    break
                 error(prev_clazz, test, None, "Field removed or incompatible change")
 
     return failures
@@ -1980,7 +1994,7 @@ def readResultsJson(jsonFile):
 
     return results
 
-def dump_result_json(args, compat_fail, api_changes, failures, api_map):
+def dump_result_json(args, compat_fail, api_changes, api_removed, failures, api_map):
     if not 'result_json' in args or not args['result_json']:
         return
 
@@ -1989,22 +2003,29 @@ def dump_result_json(args, compat_fail, api_changes, failures, api_map):
     else:
       results = {}
 
-    if 'failures' not in results:
-        results['failures'] = []
-    if 'compat_failures' not in results:
-        results['compat_failures'] = []
-    if 'api_changes' not in results:
-        results['api_changes'] = []
+    for key in ['failures', 'compat_failures', 'api_changes', 'api_removed']:
+        if key not in results:
+            results[key] = []
 
     api_changes = [
         {
-            'file': cur_noticed[x].location.fileName,
-            'column': int(cur_noticed[x].location.column),
-            'line': int(cur_noticed[x].location.line),
-        } for x in api_changes]
+            'file': api_changes[x].location.fileName,
+            'column': int(api_changes[x].location.column),
+            'line': int(api_changes[x].location.line),
+        } for x in api_changes
+    ]
+
+    api_removed = [
+        {
+            'file': api_removed[x].location.fileName,
+            'column': int(api_removed[x].location.column),
+            'line': int(api_removed[x].location.line),
+        } for x in api_removed
+    ]
 
     results['compat_failures'] += [compat_fail[x].json() for x in compat_fail]
     results['api_changes'] += api_changes
+    results['api_removed'] += api_removed
     results['failures'] += [failures[x].json() for x in failures]
 
     # Make sure ordering is consistent (helps with tests)
@@ -2012,6 +2033,7 @@ def dump_result_json(args, compat_fail, api_changes, failures, api_map):
 
     results['failure'] = ((len(results['compat_failures']) != 0)
             or (len(results['api_changes']) != 0)
+            or (len(results['api_removed']) != 0)
             or (any(f['error'] for f in results['failures'])))
 
     args['result_json'].seek(0)
@@ -2080,12 +2102,15 @@ if __name__ == "__main__":
         sys.exit()
 
     compat_fail = []
+    removed = {}
 
     with current_file as f:
         cur_fail, cur_noticed, cur = examine_stream(f, api_map)
     if not previous_file is None:
         with previous_file as f:
             prev_fail, prev_noticed, prev = examine_stream(f, api_map)
+
+        removed = prev_noticed.copy()
 
         # ignore errors from previous API level
         for p in prev_fail:
@@ -2096,9 +2121,16 @@ if __name__ == "__main__":
         for k, v in prev_noticed.items():
             if k in cur_noticed and hash(v) == hash(cur_noticed[k]):
                 del cur_noticed[k]
+                del removed[k]
 
         # look for compatibility issues
         compat_fail = verify_compat(cur, prev)
+
+
+    # Removed duplicates
+    for k, v in cur_noticed.items():
+        if k in removed:
+            del removed[k]
 
     if args['allowed_packages'] is not None:
         verify_packages(cur, args['allowed_packages'])
@@ -2112,7 +2144,9 @@ if __name__ == "__main__":
         cur_fail = filtered_fail
 
     dump_result_json(args, compat_fail,
-        cur_noticed if args['show_noticed'] else [], cur_fail, api_map)
+        cur_noticed if args['show_noticed'] else [],
+        removed if args['show_noticed'] else [],
+        cur_fail, api_map)
 
     has_error = any(cur_fail[x].error for x in cur_fail)
 
@@ -2134,10 +2168,12 @@ if __name__ == "__main__":
         else:
           sys.exit(0)
 
-    if args['show_noticed'] and len(cur_noticed) != 0:
+    if args['show_noticed'] and (len(cur_noticed) != 0 or len(removed) != 0):
         print("%s API changes noticed %s\n" % ((format(fg=WHITE, bg=BLUE, bold=True), format(reset=True))))
         for f in sorted(cur_noticed.keys()):
             print(f)
+        for f in sorted(removed.keys()):
+            print("%s removed API" % f)
         print("")
         sys.exit(10)
 

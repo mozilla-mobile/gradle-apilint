@@ -94,7 +94,10 @@ for t in tests:
         assert len(json_result['compat_failures']) == 0
 
     if t['expected'] == 'API_CHANGE':
-        assert len(json_result['api_changes']) > 0
+        assert (
+          len(json_result['api_changes']) > 0
+              or len(json_result['api_removed']) > 0
+        )
 
     if 'file' in t:
         assert json_result['failures'][0]['file'] == t['file']
