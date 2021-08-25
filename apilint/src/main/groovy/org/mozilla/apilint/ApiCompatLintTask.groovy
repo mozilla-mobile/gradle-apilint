@@ -48,6 +48,11 @@ class ApiCompatLintTask extends Javadoc {
         options.doclet = "org.mozilla.doclet.ApiDoclet"
         options.docletpath = config.files.asType(List)
 
+        // Gradle sends -notimestamp automatically which is not compatible to
+        // doclets, so we have to work around it here,
+        // see: https://github.com/gradle/gradle/issues/11898
+        options.noTimestamp(false)
+
         options.addStringOption('output', outputFile.absolutePath)
         options.addStringOption('subpackages', packageFilter)
         options.addStringOption('sourcepath', sourcePath.join(':'))
