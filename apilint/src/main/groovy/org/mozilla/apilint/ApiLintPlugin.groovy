@@ -38,9 +38,10 @@ class ApiLintPlugin implements Plugin<Project> {
                 exclude '**/R.java'
                 include '**/**.java'
 
-                sourcePath = variant.sourceSets.collect({ it.java.srcDirs }).flatten() +
-                        variant.generateBuildConfigProvider.get().sourceOutputDir +
-                        variant.aidlCompileProvider.get().sourceOutputDir
+                sourcePath =
+                    variant.sourceSets.collect({ it.java.srcDirs }).flatten() +
+                    variant.generateBuildConfigProvider.get().sourceOutputDir.asFile.get() +
+                    variant.aidlCompileProvider.get().sourceOutputDir.asFile.get()
 
                 rootDir = project.rootDir
                 outputFile = apiFile
@@ -49,6 +50,8 @@ class ApiLintPlugin implements Plugin<Project> {
                 destinationDir = new File(destinationDir, variant.baseName)
             }
             apiGenerate.dependsOn variant.javaCompileProvider.get()
+            apiGenerate.dependsOn variant.aidlCompileProvider.get()
+            apiGenerate.dependsOn variant.generateBuildConfigProvider.get()
 
             def apiCompatLint = project.task("apiCompatLint${name}", type: PythonExec) {
                 description = "Runs API compatibility lint checks for variant ${name}"
