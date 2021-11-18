@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 plugins {
-    id 'com.gradle.plugin-publish' version '0.11.0'
+    id 'com.gradle.plugin-publish' version '0.18.0'
     id 'java-gradle-plugin'
     id 'groovy'
     id 'maven-publish'
@@ -81,6 +81,6 @@ test.dependsOn integrationTestApiLint
 apply plugin: 'java'
 
 dependencies {
-    compile gradleApi()
-    compile localGroovy()
+    implementation gradleApi()
+    implementation localGroovy()
 }

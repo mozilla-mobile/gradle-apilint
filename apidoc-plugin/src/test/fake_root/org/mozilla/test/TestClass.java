@@ -31,6 +31,7 @@ public class TestClass {
     int testPackageProtectedField;
 
     public class TestSubclass {}
+    public abstract class TestExtendGeneric implements List<TestClass> {}
     public static class TestStaticSubclass {}
     public abstract class TestAbstractClass {}
     public interface TestInterface {

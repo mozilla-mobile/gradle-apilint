@@ -32,11 +32,6 @@ class ApiCompatLintTask extends Javadoc {
     @TaskAction
     @Override
     protected void generate() {
-        // javadoc 8 has a bug that requires the rt.jar file from the JRE to be
-        // in the bootclasspath (https://stackoverflow.com/a/30458820).
-        options.bootClasspath = [
-                project.file("${System.properties['java.home']}/lib/rt.jar")] + project.android.bootClasspath
-
         def config = project.configurations.findByName(CONFIG_NAME)
 
         if (config == null) {
@@ -57,10 +52,7 @@ class ApiCompatLintTask extends Javadoc {
         options.addStringOption('subpackages', packageFilter)
         options.addPathOption('sourcepath', ':').setValue(sourcePath)
         options.addStringOption('root-dir', rootDir)
-
-        skipClassesRegex.each{ className ->
-                options.addStringOption('skip-class-regex', className)
-        }
+        options.addStringOption('skip-class-regex', String.join(":", skipClassesRegex))
 
         super.generate()
     }
