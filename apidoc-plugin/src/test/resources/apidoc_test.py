@@ -26,8 +26,7 @@ sp.check_call([args.javadoc,
     "-subpackages", "org.mozilla.test",
     "-sourcepath", args.java_root,
     "-root-dir", args.java_root,
-    "-skip-class-regex", "TestSkippedClass$",
-    "-skip-class-regex", "^org.mozilla.test.TestClass.TestSkippedClass2$",
+    "-skip-class-regex", "TestSkippedClass$:^org.mozilla.test.TestClass.TestSkippedClass2$",
     "-output", output
 ])
 

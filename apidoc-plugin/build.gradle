@@ -34,6 +34,12 @@ switch (JavaVersion.current()) {
     case JavaVersion.VERSION_1_9:
     case JavaVersion.VERSION_1_10:
     case JavaVersion.VERSION_11:
+    case JavaVersion.VERSION_12:
+    case JavaVersion.VERSION_13:
+    case JavaVersion.VERSION_14:
+    case JavaVersion.VERSION_15:
+    case JavaVersion.VERSION_16:
+    case JavaVersion.VERSION_17:
     case JavaVersion.VERSION_HIGHER:
         javadocExecutable = "${System.properties['java.home']}/bin/javadoc"
         break

@@ -130,6 +130,10 @@ package org.mozilla.test {
     enum_constant public static final TestClass.TestEnum TestEnumConstantTwo;
   }
 
+  public abstract class TestClass.TestExtendGeneric implements List<TestClass> {
+    ctor public TestExtendGeneric();
+  }
+
   public static class TestClass.TestExtends extends TestClass.TestInterfaceImpl {
     ctor public TestExtends();
   }
