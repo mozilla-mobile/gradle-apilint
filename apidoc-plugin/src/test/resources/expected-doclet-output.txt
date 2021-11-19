@@ -74,7 +74,10 @@ package org.mozilla.test {
     method protected void testProtectedMethod();
     field public static final List<String> TEST_COMPOSITE_TYPE;
     field @Deprecated public static final int TEST_DEPRECATED_CONST = 1;
+    field public static final double TEST_DOUBLE = 2.0;
     field public static final int TEST_HIDDEN_ANNOTATION = 2;
+    field public static final int TEST_INT = 1;
+    field public static final long TEST_LONG = 2L;
     field public static final List<List<String>> TEST_NESTED_COMPOSITE_TYPE;
     field public static TestSort sort1;
     field public static org.mozilla.test.testsortb.TestSort sort2;
@@ -137,6 +140,12 @@ package org.mozilla.test {
 
   public static interface TestClass.TestInterface {
     method public void testInterfaceMethod();
+  }
+
+  public static class TestClass.TestInterface.TestSubInterfaceClass {
+  }
+
+  public static interface TestClass.TestInterface.TestSubInterfaceClass.TestSubClassInterface {
   }
 
   public static class TestClass.TestInterfaceImpl implements TestClass.TestInterface {
