@@ -35,6 +35,11 @@ public class TestClass {
     public abstract class TestAbstractClass {}
     public interface TestInterface {
         void testInterfaceMethod();
+        public static class TestSubInterfaceClass {
+            private TestSubInterfaceClass() {}
+            public interface TestSubClassInterface {
+            }
+        }
     }
     public interface TestDefaultInterface {
         default void testInterfaceMethod() {}
@@ -51,7 +56,14 @@ public class TestClass {
     public static class TestMultipleInterfaceImpl implements TestInterface, TestInterfaceTwo {
         public void testInterfaceMethod() {}
     }
-    public static class TestExtends extends TestInterfaceImpl {}
+    public static class TestExtends extends TestInterfaceImpl {
+        // Override methods should not appear
+        @Override
+        @NonNull
+        public String toString() {
+            return "";
+        }
+    }
     public static class TestExtendsImplements extends TestSubclass implements TestInterface, TestInterfaceTwo {}
 
     public static class TestSkippedClass {}
@@ -210,4 +222,8 @@ public class TestClass {
             private TestSortC() {}
         }
     }
+
+    public static final int TEST_INT = 1;
+    public static final long TEST_LONG = 2;
+    public static final double TEST_DOUBLE = 2.0;
 }
