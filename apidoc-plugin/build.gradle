@@ -11,14 +11,12 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
         classpath 'com.diffplug.spotless:spotless-plugin-gradle:5.16.0'
     }
 }
 
 apply plugin: 'java'
 apply plugin: 'maven-publish'
-apply plugin: 'com.jfrog.bintray'
 
 dependencies {
     implementation files("${System.properties['java.home']}/../lib/tools.jar")
@@ -85,33 +83,24 @@ publishing {
             artifact javadocJar
         }
     }
+    repositories {
+        maven {
+            url = "${project.buildDir}/maven"
+        }
+    }
+}
+
+task generateMavenArchive(type: Zip) {
+   dependsOn tasks.findByName("publishMavenPublicationToMavenRepository")
+   from(layout.buildDirectory.dir("maven/org/mozilla/apilint/apidoc-plugin")) {
+       include "${Config.API_DOC_VERSION}/**"
+   }
+   archiveName "maven.zip"
+   destinationDir project.buildDir
 }
 
 version = Config.API_DOC_VERSION
 group = Config.GROUP
-
-// Bintray
-Properties properties = new Properties()
-def localProperties = project.rootProject.file('local.properties')
-if (localProperties.exists()) {
-    properties.load(localProperties.newDataInputStream())
-}
-
-bintray {
-    user = properties.getProperty("bintray.user")
-    key = properties.getProperty("bintray.apikey")
-    publications = ['maven']
-    configurations = ['archives']
-    pkg {
-        repo = 'apidoc-plugin'
-        name = Config.GROUP
-        websiteUrl = 'https://github.com/mozilla-mobile/gradle-apilint'
-        vcsUrl = 'https://github.com/mozilla-mobile/gradle-apilint.git'
-        licenses = ["MPL-2.0"]
-        publish = true
-        publicDownloadNumbers = true
-    }
-}
 
 apply plugin: "com.diffplug.spotless"
 
