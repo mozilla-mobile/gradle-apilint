@@ -12,6 +12,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
+        classpath 'com.diffplug.spotless:spotless-plugin-gradle:5.16.0'
     }
 }
 
@@ -105,3 +106,13 @@ bintray {
         publicDownloadNumbers = true
     }
 }
+
+apply plugin: "com.diffplug.spotless"
+
+spotless {
+    java {
+        googleJavaFormat('1.11.0')
+    }
+}
+
+test.dependsOn tasks.findByName("spotlessCheck")
