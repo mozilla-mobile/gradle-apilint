@@ -514,9 +514,10 @@ public class ApiDoclet implements Doclet {
 
     @Override
     public String visitEnumConstant(VariableElement variableElement, Writer writer) {
-      return ((TypeElement) variableElement.getEnclosingElement()).getQualifiedName()
-          + "."
-          + variableElement.getSimpleName();
+      String typeName =
+          writer.import_(
+              ((TypeElement) variableElement.getEnclosingElement()).getQualifiedName().toString());
+      return typeName + "." + variableElement.getSimpleName();
     }
 
     @Override
