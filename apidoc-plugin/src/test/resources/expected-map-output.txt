@@ -169,6 +169,13 @@ org/mozilla/test/TestClass.java:57:5
 org/mozilla/test/TestClass.java:57:19
 
 
+org/mozilla/test/TestClass.java:237:5
+org/mozilla/test/TestClass.java:240:9
+
+
+org/mozilla/test/TestClass.java:231:5
+
+
 org/mozilla/test/TestClass.java:191:5
 org/mozilla/test/TestClass.java:202:9
 org/mozilla/test/TestClass.java:204:9

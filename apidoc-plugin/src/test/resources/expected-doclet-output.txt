@@ -169,6 +169,13 @@ package org.mozilla.test {
     ctor public TestMultipleInterfaceImpl();
   }
 
+  public static class TestClass.TestOverrideNonVisibleApi extends TestClass.TestPackageProtected {
+    method public void testPackageProtected();
+  }
+
+  public static class TestClass.TestPackageProtected {
+  }
+
   public static class TestClass.TestSort {
     method public void testSortA0();
     method public void testSortB0();

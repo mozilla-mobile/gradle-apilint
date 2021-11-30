@@ -227,4 +227,18 @@ public class TestClass {
     public static final int TEST_INT = 1;
     public static final long TEST_LONG = 2;
     public static final double TEST_DOUBLE = 2.0;
+
+    public static class TestPackageProtected {
+        private TestPackageProtected() {}
+        // This shouldn't appear in the API
+        /* package */ void testPackageProtected();
+    }
+
+    public static class TestOverrideNonVisibleApi extends TestPackageProtected {
+        private TestOverrideNonVisibleApi() {}
+        // This should appear in the API
+        @Override
+        public void testPackageProtected();
+    }
+
 }
