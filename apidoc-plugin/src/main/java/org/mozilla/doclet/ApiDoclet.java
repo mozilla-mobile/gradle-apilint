@@ -265,15 +265,15 @@ public class ApiDoclet implements Doclet {
             default -> 3;
           };
         }
-
-        private boolean isPublic(Element e) {
-          return e.getModifiers().contains(Modifier.PUBLIC);
-        }
-
-        private boolean isProtected(Element e) {
-          return e.getModifiers().contains(Modifier.PROTECTED);
-        }
       };
+
+  private static boolean isPublic(Element e) {
+    return e.getModifiers().contains(Modifier.PUBLIC);
+  }
+
+  private static boolean isProtected(Element e) {
+    return e.getModifiers().contains(Modifier.PROTECTED);
+  }
 
   private String classNameFragment(TypeElement classDoc) {
     StringBuilder fragment = new StringBuilder(classDoc.getSimpleName().toString());
@@ -375,7 +375,19 @@ public class ApiDoclet implements Doclet {
                     || e.getKind() == ElementKind.CONSTRUCTOR
                     || e.getKind().isField())
         // Don't add @Override methods to the API
-        .filter(m -> findSuperMethod(m, writer) == null)
+        .filter(
+            m -> {
+              // Always show the method if the visibility is upgraded
+              // or there's no super method at all
+              Element superMethod = findSuperMethod(m, writer);
+              if (superMethod == null) {
+                return true;
+              }
+              if (!isPublic(superMethod) && !isProtected(superMethod)) {
+                return true;
+              }
+              return isPublic(m) && !isPublic(superMethod);
+            })
         .filter(
             m ->
                 m.getModifiers().stream()
