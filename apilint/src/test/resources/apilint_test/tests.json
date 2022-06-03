@@ -267,6 +267,14 @@
     "column": 45,
     "allowed_packages": ["test", "java", "android"]
   },{
+    "test": "test-deprecated-method-missing",
+    "expected": "API_ERROR",
+    "deprecation-annotation": "test.DeprecationSchedule",
+    "check_compat": false,
+    "filter": "GV",
+    "rule": "GV12",
+    "allowed_packages": ["test", "java", "android"]
+  },{
     "test": "test-deprecated-method",
     "expected": "API_ERROR",
     "deprecation-annotation": "test.DeprecationSchedule",

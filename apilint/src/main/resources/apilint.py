@@ -34,6 +34,7 @@ BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 ALLOW_GOOGLE = False
 USE_COLOR = True
 
+DEPRECATED_ANNOTATION = "java.lang.Deprecated"
 DEPRECATION_SCHEDULE_ANNOTATION = None
 LIBRARY_VERSION = None
 
@@ -1672,6 +1673,12 @@ def verify_enum_annotations(clazz):
 
 def get_deprecated_annotation(subject):
     for a in subject.annotations:
+        if a.typ.name == DEPRECATED_ANNOTATION:
+            return a
+    return None
+
+def get_deprecation_schedule_annotation(subject):
+    for a in subject.annotations:
         if a.typ.name == DEPRECATION_SCHEDULE_ANNOTATION:
             return a
     return None
@@ -1681,18 +1688,21 @@ def verify_deprecated_annotations(clazz):
         # --deprecation-annotation not specified, nothing to check
         return
 
-    DEPRECATED_ANNOTATION = "java.lang.Deprecated"
-
     def is_deprecated(subject):
         for a in subject.annotations:
-            if a.typ.name == DEPRECATED_ANNOTATION:
+            if (a.typ.name == DEPRECATED_ANNOTATION
+                    or a.typ.name == DEPRECATION_SCHEDULE_ANNOTATION):
                 return True
         return False
 
     def check_member(member):
         if not is_deprecated(member):
             return
-        annotation = get_deprecated_annotation(member)
+        if get_deprecated_annotation(member) is None:
+            error(clazz, member if clazz != member else None,
+                "GV12", "Missing @Deprecated annotation.")
+            return
+        annotation = get_deprecation_schedule_annotation(member)
         if annotation is None:
             error(clazz, member if clazz != member else None,
                 "GV9", "Missing deprecation schedule "
@@ -1899,7 +1909,7 @@ def verify_compat(cur, prev):
         return False
 
     def deprecated_version_matches(test):
-        annotation = get_deprecated_annotation(test)
+        annotation = get_deprecation_schedule_annotation(test)
         if annotation is None:
             return False
         return int(annotation.arguments['version']) == LIBRARY_VERSION
