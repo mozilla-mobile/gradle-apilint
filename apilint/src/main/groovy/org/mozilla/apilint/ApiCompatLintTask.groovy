@@ -50,7 +50,7 @@ class ApiCompatLintTask extends Javadoc {
 
         options.addStringOption('output', outputFile.absolutePath)
         options.addStringOption('subpackages', packageFilter)
-        options.addPathOption('sourcepath', ':').setValue(sourcePath)
+        options.addPathOption('sourcepath').setValue(sourcePath)
         options.addStringOption('root-dir', rootDir)
         options.addStringOption('skip-class-regex', String.join(":", skipClassesRegex))
 
