@@ -497,8 +497,8 @@ def read_map(api_map, lineNumber):
     mapString = api_map[lineNumber-1].strip()
     if not mapString:
         return Location("api.txt", lineNumber, 0)
-    [fileName,line,column] = mapString.split(":")
-    return Location(fileName, line, column)
+    m = re.match(r"(.*?):(\d+):(\d+)$", mapString)
+    return Location(m.group(1), m.group(2), m.group(3))
 
 failures = {}
 
