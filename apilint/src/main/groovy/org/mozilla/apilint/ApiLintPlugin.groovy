@@ -23,7 +23,7 @@ class ApiLintPlugin implements Plugin<Project> {
         // TODO: support applications
         project.android.libraryVariants.all { variant ->
             def name = variant.name.capitalize()
-            def apiFileName = "${variant.javaCompileProvider.get().destinationDir}/${extension.apiOutputFileName}"
+            def apiFileName = "${variant.javaCompileProvider.get().destinationDirectory.get()}/${extension.apiOutputFileName}"
             def apiFile = project.file(apiFileName)
 
             def currentApiFile = project.file(extension.currentApiRelativeFilePath)
@@ -62,7 +62,7 @@ class ApiLintPlugin implements Plugin<Project> {
                 args currentApiFile
                 args '--result-json'
                 args project.file(
-                        "${variant.javaCompileProvider.get().destinationDir}/${extension.jsonResultFileName}")
+                        "${variant.javaCompileProvider.get().destinationDirectory.get()}/${extension.jsonResultFileName}")
                 args '--append-json'
                 args '--api-map'
                 args project.file(apiFileName + ".map")
@@ -85,7 +85,7 @@ class ApiLintPlugin implements Plugin<Project> {
                 args apiFile
                 args '--result-json'
                 args project.file(
-                        "${variant.javaCompileProvider.get().destinationDir}/${extension.jsonResultFileName}")
+                        "${variant.javaCompileProvider.get().destinationDirectory.get()}/${extension.jsonResultFileName}")
                 if (extension.lintFilters != null) {
                     args '--filter-errors'
                     args extension.lintFilters
@@ -126,7 +126,7 @@ class ApiLintPlugin implements Plugin<Project> {
                     args project.file(extension.changelogFileName)
                     args '--result-json'
                     args project.file(
-                            "${variant.javaCompileProvider.get().destinationDir}/${extension.jsonResultFileName}")
+                            "${variant.javaCompileProvider.get().destinationDirectory.get()}/${extension.jsonResultFileName}")
                 }
 
                 apiChangelogCheck.dependsOn apiGenerate
