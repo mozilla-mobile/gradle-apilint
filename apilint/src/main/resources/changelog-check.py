@@ -10,7 +10,7 @@ import json
 import re
 import sys
 
-API_VERSION_REGEX = re.compile('^\[api-version\]: ([a-f0-9]{40})$')
+API_VERSION_REGEX = re.compile(r'^\[api-version\]: ([a-f0-9]{40})$')
 
 class MissingApiVersionError(Exception):
     pass
