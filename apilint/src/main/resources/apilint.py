@@ -120,7 +120,7 @@ class Field():
         self.blame = blame
         self.source = None
 
-        raw = collect_chunks(raw, "[\s;]")
+        raw = collect_chunks(raw, r"[\s;]")
         self.split = list(raw)
 
         for r in ["field", "enum_constant", "volatile", "transient", "public", "protected", "static", "final", "deprecated"]:
@@ -149,7 +149,7 @@ class Field():
 
 class Argument():
     def __init__(self, clazz, source, raw, location, blame, imports):
-        raw = collect_chunks(raw, "\s")
+        raw = collect_chunks(raw, r"\s")
         self.annotations = [
             Annotation(clazz, self, location, a, blame, imports) for a in raw if a.startswith("@")]
         raw = [x for x in raw if not x.startswith("@")]
@@ -210,7 +210,7 @@ class Method():
         self.blame = blame
         self.source = None
 
-        raw = collect_chunks(raw, "\s")
+        raw = collect_chunks(raw, r"\s")
 
         for r in ["", ";"]:
             while r in raw: raw.remove(r)
@@ -332,7 +332,7 @@ class Class():
         self.methods = []
         self.source = None
 
-        raw = collect_chunks(self.raw, "\s")
+        raw = collect_chunks(self.raw, r"\s")
         self.split = list(raw)
         self.isEnum = False
         if "class" in raw:
@@ -348,7 +348,7 @@ class Class():
         if "extends" in raw:
             self.extends = Type(self, None, raw[raw.index("extends")+1], location,
                                 blame, imports)
-            self.extends_path = collect_chunks(self.extends.name, "\.")
+            self.extends_path = collect_chunks(self.extends.name, r"\.")
         else:
             self.extends = None
             self.extends_path = []
@@ -403,7 +403,7 @@ def _parse_stream(f, api_map, clazz_cb=None):
     blame = None
     imports = {}
 
-    re_blame = re.compile("^([a-z0-9]{7,}) \(<([^>]+)>.+?\) (.+?)$")
+    re_blame = re.compile(r"^([a-z0-9]{7,}) \(<([^>]+)>.+?\) (.+?)$")
     for raw in f:
         line += 1
         raw = raw.rstrip()
@@ -529,7 +529,7 @@ def notice(clazz):
 
 def verify_constants(clazz):
     """All static final constants must be FOO_NAME style."""
-    if re.match("android\.R\.[a-z]+", clazz.fullname): return
+    if re.match(r"android\.R\.[a-z]+", clazz.fullname): return
     if clazz.fullname.startswith("android.os.Build"): return
     if clazz.fullname == "android.system.OsConstants": return
 
@@ -555,7 +555,7 @@ def verify_class_names(clazz):
     """Try catching malformed class names like myMtp or MTPUser."""
     if clazz.fullname.startswith("android.opengl"): return
     if clazz.fullname.startswith("android.renderscript"): return
-    if re.match("android\.R\.[a-z]+", clazz.fullname): return
+    if re.match(r"android\.R\.[a-z]+", clazz.fullname): return
 
     if re.search("[A-Z]{2,}", clazz.name) is not None:
         warn(clazz, None, "S1", "Class names with acronyms should be Mtp not MTP")
@@ -1314,7 +1314,7 @@ def verify_listener_last(clazz):
 
 def verify_resource_names(clazz):
     """Verifies that resource names have consistent case."""
-    if not re.match("android\.R\.[a-z]+", clazz.fullname): return
+    if not re.match(r"android\.R\.[a-z]+", clazz.fullname): return
 
     # Resources defined by files are foo_bar_baz
     if clazz.name in ["anim","animator","color","dimen","drawable","interpolator","layout","transition","menu","mipmap","string","plurals","raw","xml"]:
@@ -1374,7 +1374,7 @@ def verify_manager_list(clazz):
 def verify_abstract_inner(clazz):
     """Verifies that abstract inner classes are static."""
 
-    if re.match(".+?\.[A-Z][^\.]+\.[A-Z]", clazz.fullname):
+    if re.match(r".+?\.[A-Z][^\.]+\.[A-Z]", clazz.fullname):
         if " abstract " in clazz.raw and " static " not in clazz.raw:
             warn(clazz, None, None, "Abstract inner classes should be static to improve testability")
 
