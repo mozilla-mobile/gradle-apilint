@@ -25,13 +25,14 @@ class ApiLintPlugin implements Plugin<Project> {
             def name = variant.name.capitalize()
             def apiFileName = "${variant.javaCompileProvider.get().destinationDirectory.get()}/${extension.apiOutputFileName}"
             def apiFile = project.file(apiFileName)
+            def variantClasspath = variant.javaCompileProvider.get().classpath
 
             def currentApiFile = project.file(extension.currentApiRelativeFilePath)
 
             def apiGenerate = project.task("apiGenerate${name}", type: ApiCompatLintTask) {
                 description = "Generates API file for build variant ${name}"
                 doFirst {
-                    classpath = variant.javaCompileProvider.get().classpath
+                    classpath = variantClasspath
                 }
 
                 source = variant.sourceSets.collect({ it.java.srcDirs })
