@@ -23,7 +23,7 @@ sourceSets {
 }
 
 group = Config.GROUP
-version = 'master-SNAPSHOT'
+version = '0.5.4'
 
 gradlePlugin {
     website = 'https://github.com/mozilla-mobile/gradle-apilint'
