@@ -57,7 +57,7 @@ class ApiLintPlugin implements Plugin<Project> {
             def apiCompatLint = project.task("apiCompatLint${name}", type: PythonExec) {
                 description = "Runs API compatibility lint checks for variant ${name}"
                 workingDir '.'
-                scriptPath 'apilint.py'
+                scriptPath = 'apilint.py'
                 args '--show-noticed'
                 args apiFile
                 args currentApiFile
@@ -82,7 +82,7 @@ class ApiLintPlugin implements Plugin<Project> {
             def apiLintSingle = project.task("apiLintSingle${name}", type: PythonExec) {
                 description = "Runs API lint checks for variant ${name}"
                 workingDir '.'
-                scriptPath 'apilint.py'
+                scriptPath = 'apilint.py'
                 args apiFile
                 args '--result-json'
                 args project.file(
@@ -120,7 +120,7 @@ class ApiLintPlugin implements Plugin<Project> {
                     description = "Checks that the API changelog has been updated."
                     group = 'Verification'
                     workingDir '.'
-                    scriptPath 'changelog-check.py'
+                    scriptPath = 'changelog-check.py'
                     args '--api-file'
                     args apiFile
                     args '--changelog-file'
@@ -150,7 +150,7 @@ class ApiLintPlugin implements Plugin<Project> {
                 args '--label', 'Local API'
 
                 // diff exit value is != 0 if the files are different
-                ignoreExitValue true
+                ignoreExitValue = true
             }
 
             def apiLintHelp = project.task("apiLintHelp${name}") {
